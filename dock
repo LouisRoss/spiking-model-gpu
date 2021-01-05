@@ -1,0 +1,10 @@
+#!/bin/bash
+echo $(pwd)
+docker container run \
+--gpus all \
+-it \
+--rm \
+--name=spiking-model-gpu \
+-v "$(pwd)":/home/spiking-model-gpu \
+louisross/spiking-model-gpu:1.0 \
+bash
