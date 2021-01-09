@@ -1,0 +1,3 @@
+spiking-model-gpu/bin/*
+spiking-model-gpu/source/obj/*
+spiking-model-gpu/source/mmul
