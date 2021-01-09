@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/usr/include/c++/9",
+                "${workspaceFolder}/spiking-model-gpu/source",
+                "${workspaceFolder}/spiking-model-gpu/include",
+                "${workspaceFolder}/spiking-model-gpu/include/**",
+                "/usr/local/cuda/include",
+                "/usr/include/hdf5/serial"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/local/cuda/bin/nvcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}
