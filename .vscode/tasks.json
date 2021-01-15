@@ -6,7 +6,7 @@
             "command": "/usr/bin/g++",
             "args": [
                 "-g",
-                "${workspaceFolder}/source/*.cpp",
+                "${workspaceFolder}/spiking-model-gpu/source/*.cpp",
                 "-I${fileDirname}/../include",
                 "-pthread",
                 "-std=c++17",

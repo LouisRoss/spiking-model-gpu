@@ -287,7 +287,7 @@ BDIR=../bin
 ################################################################################
 
 # Gencode arguments
-SMS ?= 35 37 50 52 60 61 70 75 80 86
+SMS ?= 52 60 61 70 75 80 86
 
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified - waiving sample <<<)
@@ -316,7 +316,7 @@ endif
 # Target rules
 all: build
 
-build: mmul
+build: NeuronModel
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -332,16 +332,22 @@ $(ODIR)/mmul.o: mmul.cu
 $(ODIR)/mmul_main.o: mmul_main.cpp
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-mmul: $(ODIR)/mmul.o $(ODIR)/mmul_main.o
+$(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
+	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+$(ODIR)/NeuronModel.o: NeuronModel.cpp ../include/NeuronModel.h ../include/NeuronCommon.h  ../include/NeuronNode.h ../include/NeuronSynapse.h
+	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)
 
 run: build
-	$(EXEC) ./mmul
+	$(EXEC) ./NeuronModel
 
 clean:
-	rm -f mmul $(ODIR)/mmul.o $(ODIR)/mmul_main.o
-	rm -rf $(BDIR)/mmul
+	rm -f NeuronModel $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
+	rm -rf $(BDIR)/NeuronModel
 
 clobber: clean
