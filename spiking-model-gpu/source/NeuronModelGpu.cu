@@ -88,11 +88,8 @@ DeviceFixupShim(
 	};
     auto launch_configuration = cuda::make_launch_config(grid_dims, 1);
     
-	cuda::launch(kernel_function, launch_configuration, modelSize, neurons, /*(NeuronSynapse (*)[SynapticConnectionsPerNode])*/synapses);
+	cuda::launch(kernel_function, launch_configuration, modelSize, neurons, synapses);
 	cuda::device::current::get().synchronize();
-
-    //unsigned int blocks = PostsynapticConnectionsPerNode / 1024 + 1;
-    //DeviceFixup<<<blocks, 1024>>>(modelSize, neurons, synapses);
 }
 
 #if false
@@ -139,13 +136,14 @@ __global__ void ModelSynapses_reduce(unsigned long int modelSize)
 }
 #endif
 
-__global__ void ModelSynapses()
+__global__ void ModelSynapses(unsigned long int modelSize)
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
-    auto* neuron = &g_pNeurons[neuronId];
 
-    if (!IsInSpikeTime(neuron->TicksSinceLastSpike))
+    if (neuronId < modelSize)
     {
+        auto* neuron = &g_pNeurons[neuronId];
+
         for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
         {
             auto* synapse = &g_pSynapses[neuronId][synapseId];
@@ -153,18 +151,119 @@ __global__ void ModelSynapses()
             if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike))
             {
                 if (synapse->Type == SynapseType::Excitatory)
-                    neuron->Activation += g_pSynapses[neuronId][synapseId].Strength;
+                    neuron->Activation += synapse->Strength;
                 if (synapse->Type == SynapseType::Inhibitory)
-                    neuron->Activation -= g_pSynapses[neuronId][synapseId].Strength;
+                    neuron->Activation -= synapse->Strength;
     
                 synapse->TickSinceLastSignal = SynapseSignalTimeMax;
             }
         }
 
-        if (neuron->Activation >= ActivationThreshold)
+        if (neuron->Activation > ActivationThreshold)
         {
             neuron->TicksSinceLastSpike = RecoveryTimeMax;
-            neuron->Activation = 0;
+            neuron->Activation = ActivationThreshold;
+        }
+
+        if (neuron->Activation <= -ActivationThreshold)
+        {
+            neuron->Activation = -ActivationThreshold;
         }
     }
 }
+
+//
+//  Called from CPU.  Launch the CUDA kernel.
+//
+void
+ModelSynapsesShim(
+    cuda::device_t& device,
+    unsigned long int modelSize)
+{
+	const auto kernel_function = ModelSynapses;
+	cuda::kernel_t kernel(device, kernel_function);
+
+    const auto threadCount = 256;
+    const auto blockCount = ceil((float)modelSize/(float)threadCount);
+
+	const cuda::grid::dimensions_t grid_dims = {
+		cuda::grid::dimension_t(blockCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+	const cuda::grid::dimensions_t block_dims = {
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+    
+	cuda::launch(kernel_function, launch_configuration, modelSize);
+	cuda::device::current::get().synchronize();
+}
+
+__global__ void ModelTimers(unsigned long int modelSize)
+{
+    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (neuronId < modelSize)
+    {
+        auto* neuron = &g_pNeurons[neuronId];
+        auto recoveryTime = neuron->TicksSinceLastSpike; 
+
+        if (!IsInSpikeTime(recoveryTime))
+        {
+            neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+        }
+
+        if (IsRefractoryTick(recoveryTime))
+        {
+            neuron->Activation = 0;
+        }
+
+        if (IsInRecovery(recoveryTime))
+        {
+            neuron->TicksSinceLastSpike--;
+        }
+
+        for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
+        {
+            auto* synapse = &g_pSynapses[neuronId][synapseId];
+            if (synapse->TickSinceLastSignal > 0)
+            {
+                synapse->TickSinceLastSignal--;
+            }
+        }
+    }
+}
+
+//
+//  Called from CPU.  Launch the CUDA kernel.
+//
+void
+ModelTimersShim(
+    cuda::device_t& device,
+    unsigned long int modelSize)
+{
+	const auto kernel_function = ModelTimers;
+	cuda::kernel_t kernel(device, kernel_function);
+
+    const auto threadCount = 256;
+    const auto blockCount = ceil((float)modelSize/(float)threadCount);
+
+	const cuda::grid::dimensions_t grid_dims = {
+		cuda::grid::dimension_t(blockCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+	const cuda::grid::dimensions_t block_dims = {
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+    
+	cuda::launch(kernel_function, launch_configuration, modelSize);
+	cuda::device::current::get().synchronize();
+}
+

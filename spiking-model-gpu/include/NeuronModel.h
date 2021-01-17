@@ -29,9 +29,13 @@ namespace embeddedpenguins::neuron::model
     public:
         NeuronModel(unsigned long int modelSize);
         void InitializeModel();
-        void PrintSynapses(int w);
+        void Run();
 
     private:
         void Initialize();
+        void ExecuteAStep();
+        void InitializeForTest();
+        void PrintSynapses(int w);
+        void PrintNeurons(int w);
     };
 }

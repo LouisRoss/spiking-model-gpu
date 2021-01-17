@@ -1,24 +1,22 @@
 #include <iostream>
 #include <iomanip>
+#include <string>
 #include <memory>
 #include <limits>
 
 #include "NeuronModel.h"
+#include "KeyListener.h"
 
 using std::cout;
 
 using namespace embeddedpenguins::neuron::infrastructure;
+using embeddedpenguins::life::infrastructure::KeyListener;
 
 //
 // Model parameters.  Any or all of these might become configurable in the future.
 //
 unsigned long int ModelSize { 10000 };
-
-//
-// The model.
-//
-//NeuronNode* pNeurons {};
-//NeuronSynapse* pSynapses {};
+std::string cls("\033[2J\033[H");
 
 //
 // Forward reference of device objects.
@@ -29,6 +27,16 @@ DeviceFixupShim(
     unsigned long int modelSize,
     NeuronNode neurons[],
     NeuronSynapse synapses[][SynapticConnectionsPerNode]);
+
+void
+ModelSynapsesShim(
+    cuda::device_t& device,
+    unsigned long int modelSize);
+
+void
+ModelTimersShim(
+    cuda::device_t& device,
+    unsigned long int modelSize);
 
 namespace embeddedpenguins::neuron::model
 {
@@ -69,6 +77,7 @@ namespace embeddedpenguins::neuron::model
         }
         cout << "done\n";
         PrintSynapses(5);
+        InitializeForTest();
 
         cuda::memory::copy(neuronsDevice_.get(), neuronsHost_.get(), modelSize_ * sizeof(NeuronNode));
         cuda::memory::copy(synapsesDevice_.get(), synapsesHost_.get(), modelSize_ * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
@@ -78,29 +87,60 @@ namespace embeddedpenguins::neuron::model
         cout << "Returned from DeviceFixupShim\n";
 
         // Test, remove.
-        cuda::memory::copy(synapsesHost_.get(), synapsesDevice_.get(), modelSize_ * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
-        PrintSynapses(20);
+        //cuda::memory::copy(synapsesHost_.get(), synapsesDevice_.get(), modelSize_ * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+        //PrintSynapses(20);
     }
 
-    void NeuronModel::PrintSynapses(int w)
+    void NeuronModel::Run()
     {
-        const auto width = 100;
-        const auto height = modelSize_ / width;
+        constexpr char KEY_UP = 'A';
+        constexpr char KEY_DOWN = 'B';
+        constexpr char KEY_LEFT = 'D';
+        constexpr char KEY_RIGHT = 'C';
 
-        for (auto row = 1; row < 10; row++)
+        char c {' '};
         {
-            for (auto col = 0; col < 10; col++)
+            KeyListener listener;
+
+            bool quit {false};
+            while (!quit)
             {
-                auto& synapsesForNeuron = synapsesHost_[row * width + col];
-                for (auto synapseId = 0; synapseId < 25; synapseId++)
+                auto gotChar = listener.Listen(50, c);
+                if (gotChar)
                 {
-                    cout << std::setw(w) << (unsigned long int)synapsesForNeuron[synapseId].PresynapticNeuron;
+                    switch (c)
+                    {
+                        case KEY_UP:
+                        case KEY_DOWN:
+                        case KEY_LEFT:
+                        case KEY_RIGHT:
+                        case '=':
+                        case '+':
+                        case '-':
+                            break;
+
+                        case 's':
+                        case 'S':
+                            ExecuteAStep();
+                            break;
+
+                        case 'q':
+                        case 'Q':
+                            quit = true;
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
-                cout << std::endl;
             }
-            cout << std::endl;
         }
+
+        cout << "Received keystroke " << c << ", quitting\n";
     }
+
+    /////////////////////////////////////// Private methods //////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////
 
     void NeuronModel::Initialize()
     {
@@ -121,26 +161,73 @@ namespace embeddedpenguins::neuron::model
         }
         cout << "done\n";
     }
-}
 
-
-void InitializeModel(std::unique_ptr<NeuronNode[]>& neurons, std::unique_ptr<NeuronSynapse[][SynapticConnectionsPerNode]>& synapses)
-{
-    const auto width = 100;
-    const auto height = ModelSize / width;
-
-    for (auto row = 1; row < width; row++)
+    void NeuronModel::ExecuteAStep()
     {
-        for (auto col = 0; col < height; col++)
+        cout << "Calling ModelSynapsesShim(" << device_.id() << ", " << ModelSize << ")\n";
+        ModelSynapsesShim(device_, ModelSize);
+        cout << "Returned from ModelSynapsesShim\n";
+
+        cout << "Calling ModelTimersShim(" << device_.id() << ", " << ModelSize << ")\n";
+        ModelTimersShim(device_, ModelSize);
+        cout << "Returned from ModelTimersShim\n";
+
+        cuda::memory::copy(neuronsHost_.get(), neuronsDevice_.get(), modelSize_ * sizeof(NeuronNode));
+        cuda::memory::copy(synapsesHost_.get(), synapsesDevice_.get(), modelSize_ * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+
+        cout << cls;
+        PrintSynapses(20);
+        PrintNeurons(5);
+    }
+
+    void NeuronModel::InitializeForTest()
+    {
+        const auto width = 100;
+        const auto height = modelSize_ / width;
+
+        neuronsHost_[0].TicksSinceLastSpike = 200;
+        synapsesHost_[1 * width][0].Strength = 101;
+        synapsesHost_[1 * width + 1][0].Strength = 50;
+    }
+
+    void NeuronModel::PrintSynapses(int w)
+    {
+        const auto width = 100;
+        const auto height = modelSize_ / width;
+
+        for (auto row = 1; row < 4; row++)
         {
-            for (auto rowForPreviousCol = 0; rowForPreviousCol < width; rowForPreviousCol++)
+            for (auto col = 0; col < 6; col++)
             {
-                auto& synapse = synapses.get()[col * width + row][rowForPreviousCol];
-                *(unsigned long*)&synapse.PresynapticNeuron = (col - 1) * width + rowForPreviousCol;
+                auto& synapsesForNeuron = synapsesHost_[row * width + col];
+                for (auto synapseId = 0; synapseId < 5; synapseId++)
+                {
+                    cout << std::setw(w) << (unsigned long int)synapsesForNeuron[synapseId].PresynapticNeuron
+                    << "(" << std::setw(3) << (unsigned int)synapsesForNeuron[synapseId].Strength << ")";
+                }
+                cout << std::endl;
             }
+            cout << std::endl;
+        }
+    }
+
+    void NeuronModel::PrintNeurons(int w)
+    {
+        const auto width = 100;
+        const auto height = modelSize_ / width;
+
+        for (auto row = 0; row < 10; row++)
+        {
+            for (auto col = 0; col < 10; col++)
+            {
+                auto& neuron = neuronsHost_[row * width + col];
+                cout << std::setw(w) << neuron.Activation << "(" << std::setw(3) << neuron.TicksSinceLastSpike << ")";
+            }
+            cout << std::endl;
         }
     }
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 //Main program entry.
@@ -152,40 +239,10 @@ int main(int argc, char* argv[])
 		cout << "No CUDA devices on this system\n";
         return -1;
 	}
-#if false
-	cuda::device::id_t device_id = cuda::device::default_device_id;
-	auto device = cuda::device::get(device_id).make_current();
-	cout << "Using CUDA device " << device.name() << " (having device ID " << device.id() << ")\n";
 
-	auto pNeuronsHost = std::make_unique<NeuronNode[]>(ModelSize);
-	auto pSynapsesHost = std::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(ModelSize);
-
-    // Initialize model.
-    InitializeModel(pNeuronsHost, pSynapsesHost);
-
-    // Allocate device memory
-	auto pNeurons = cuda::memory::device::make_unique<NeuronNode[]>(device, ModelSize);
-	auto pSynapses = cuda::memory::device::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(device, ModelSize);
-    //cudaMalloc((void**)&pNeurons, ModelSize * sizeof(NeuronNode));
-    //cudaMalloc((void**)&pSynapses, ModelSize * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
-
-	cuda::memory::copy(pNeurons.get(), pNeuronsHost.get(), ModelSize * sizeof(NeuronNode));
-	cuda::memory::copy(pSynapses.get(), pSynapsesHost.get(), ModelSize * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
-	//cuda::memory::copy(pNeurons, pNeuronsHost.get(), ModelSize * sizeof(NeuronNode));
-	//cuda::memory::copy(pSynapses, pSynapsesHost.get(), ModelSize * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
-
-
-    cout << "Calling DeviceFixupShim(" << device.id() << ", " << ModelSize << ", " << "pNeurons, pSynapses)\n";
-    DeviceFixupShim(device, ModelSize, pNeurons.get(), pSynapses.get());
-    //DeviceFixupShim(device.id(), ModelSize, pNeurons, pSynapses);
-    cout << "Returned from DeviceFixupShim\n";
-
-    // Free memory on device
-    //cudaFree(pSynapses);
-    //cudaFree(pNeurons);
-#else
     embeddedpenguins::neuron::model::NeuronModel model(ModelSize);
     model.InitializeModel();
-#endif
+    model.Run();
+
     return 0;
 }
