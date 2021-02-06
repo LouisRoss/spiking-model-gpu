@@ -11,6 +11,7 @@ using namespace embeddedpenguins::neuron::infrastructure;
 //
 // The device model.
 //
+__device__ unsigned long int g_modelSize {};
 __device__ NeuronNode* g_pNeurons {};
 __device__ NeuronSynapse (*g_pSynapses)[SynapticConnectionsPerNode] {};
 
@@ -44,6 +45,7 @@ DeviceFixup(
 
 	if( synapseId == 0 && neuronId == 0)
 	{
+        g_modelSize = modelSize;
 		g_pNeurons = neurons;
         g_pSynapses = synapses;
 	}
@@ -136,11 +138,11 @@ __global__ void ModelSynapses_reduce(unsigned long int modelSize)
 }
 #endif
 
-__global__ void ModelSynapses(unsigned long int modelSize)
+__global__ void ModelSynapses()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (neuronId < modelSize)
+    if (neuronId < g_modelSize)
     {
         auto* neuron = &g_pNeurons[neuronId];
 
@@ -198,15 +200,15 @@ ModelSynapsesShim(
 	};
     auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
     
-	cuda::launch(kernel_function, launch_configuration, modelSize);
+	cuda::launch(kernel_function, launch_configuration);
 	cuda::device::current::get().synchronize();
 }
 
-__global__ void ModelTimers(unsigned long int modelSize)
+__global__ void ModelTimers()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (neuronId < modelSize)
+    if (neuronId < g_modelSize)
     {
         auto* neuron = &g_pNeurons[neuronId];
         auto recoveryTime = neuron->TicksSinceLastSpike; 
@@ -263,7 +265,7 @@ ModelTimersShim(
 	};
     auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
     
-	cuda::launch(kernel_function, launch_configuration, modelSize);
+	cuda::launch(kernel_function, launch_configuration);
 	cuda::device::current::get().synchronize();
 }
 

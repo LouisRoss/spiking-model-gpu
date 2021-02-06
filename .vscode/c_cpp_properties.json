@@ -1,7 +1,7 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "C/C++: g++ build active file",
             "includePath": [
                 "/usr/include/c++/9",
                 "${workspaceFolder}/spiking-model-gpu/source",

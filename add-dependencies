@@ -1,0 +1,22 @@
+#!/bin/bash
+
+mkdir ./include
+
+git clone https://github.com/nlohmann/json.git
+cp -R json/include/nlohmann include/nlohmann
+rm -rf json/*
+rm -rf json/\.*
+rmdir json
+
+git clone https://github.com/BlueBrain/HighFive.git
+cp -r HighFive/include/* ./include
+rm -rf HighFive/*
+rm -rf HighFive/\.*
+rmdir HighFive
+
+git clone https://github.com/vincentlaucsb/csv-parser.git
+mkdir ./include/csv-parser
+cp -r csv-parser/single_include/* ./include/csv-parser
+rm -rf csv-parser/*
+rm -rf csv-parser/\.*
+rmdir csv-parser

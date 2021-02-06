@@ -1,4 +1,4 @@
-FROM    nvidia/cuda:11.0-devel-ubuntu20.04
+FROM    nvidia/cuda:11.2-devel-ubuntu20.04
 LABEL   maintainer="Louis Ross <louis.ross@gmail.com"
 
 ARG     MYDIR=/home/spiking-model-gpu

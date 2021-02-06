@@ -89,6 +89,11 @@ namespace embeddedpenguins::neuron::model
         // Test, remove.
         //cuda::memory::copy(synapsesHost_.get(), synapsesDevice_.get(), modelSize_ * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
         //PrintSynapses(20);
+                            ExecuteAStep();
+                            ExecuteAStep();
+                            ExecuteAStep();
+                            ExecuteAStep();
+                            ExecuteAStep();
     }
 
     void NeuronModel::Run()
@@ -242,7 +247,7 @@ int main(int argc, char* argv[])
 
     embeddedpenguins::neuron::model::NeuronModel model(ModelSize);
     model.InitializeModel();
-    model.Run();
+    //model.Run();
 
     return 0;
 }
