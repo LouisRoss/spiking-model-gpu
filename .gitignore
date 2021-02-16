@@ -1,4 +1,5 @@
 spiking-model-gpu/bin/*
+spiking-model-gpu/record/*
 spiking-model-gpu/source/obj/*
 spiking-model-gpu/source/mmul
 spiking-model-gpu/source/NeuronModel
