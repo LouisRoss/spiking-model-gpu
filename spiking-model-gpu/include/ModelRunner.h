@@ -10,11 +10,13 @@
 
 #include "nlohmann/json.hpp"
 
-#include "ModelEngineCommon.h"
-#include "ModelEngine.h"
-#include "ModelInitializerProxy.h"
+#include "core/ConfigurationRepository.h"
+#include "core/ModelInitializerProxy.h"
 
-namespace embeddedpenguins::modelengine::sdk
+#include "GpuModelCarrier.h"
+#include "ModelEngine.h"
+
+namespace embeddedpenguins::gpu::neuron::model
 {
     using std::string;
     using std::begin;
@@ -26,8 +28,9 @@ namespace embeddedpenguins::modelengine::sdk
     using std::cout;
     using std::ifstream;
     using nlohmann::json;
-    using embeddedpenguins::modelengine::ModelEngine;
-    using embeddedpenguins::modelengine::ConfigurationUtilities;
+
+    using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
 
     //
     // Wrap the most common startup and teardown sequences to run a model
@@ -40,19 +43,18 @@ namespace embeddedpenguins::modelengine::sdk
     // When using the ModelRunner to run a model, it owns the model (a vector of NODETYPE),
     // the model engine object, and all configuration defined for the model.
     //
-    template<class OPERATORTYPE, class IMPLEMENTATIONTYPE, class MODELCARRIERTYPE, class RECORDTYPE>
+    template<class RECORDTYPE>
     class ModelRunner
     {
         bool valid_ { false };
         string controlFile_ {};
 
-        ConfigurationUtilities configuration_ {};
-        unique_ptr<ModelEngine<OPERATORTYPE, IMPLEMENTATIONTYPE, MODELCARRIERTYPE, RECORDTYPE>> modelEngine_ {};
-        string modelInitializerLocation_ {};
+        ConfigurationRepository configuration_ {};
+        unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
 
     public:
-        ModelEngine<OPERATORTYPE, IMPLEMENTATIONTYPE, MODELCARRIERTYPE, RECORDTYPE>& GetModelEngine() { return *modelEngine_.get(); }
-        const ConfigurationUtilities& ConfigurationCarrier() const { return configuration_; }
+        const ModelEngine<RECORDTYPE>& getModelEngine() const { return *modelEngine_.get(); }
+        const ConfigurationRepository& getConfigurationRepository() const { return configuration_; }
         const json& Control() const { return configuration_.Control(); }
         const json& Configuration() const { return configuration_.Configuration(); }
         const json& Monitor() const { return configuration_.Monitor(); }
@@ -67,16 +69,13 @@ namespace embeddedpenguins::modelengine::sdk
 
             if (valid_)
                 valid_ = configuration_.InitializeConfiguration(controlFile_);
-
-            if (valid_)
-                modelInitializerLocation_ = configuration_.Configuration()["Execution"]["InitializerLocation"].get<string>();
         }
 
         //
         // Ensure the model is created and initialized, then start
         // it running asynchronously.
         //
-        bool Run(MODELCARRIERTYPE& carrier)
+        bool Run(GpuModelCarrier& carrier)
         {
             if (!valid_)
                 return false;
@@ -140,28 +139,13 @@ namespace embeddedpenguins::modelengine::sdk
             valid_ = true;
         }
 
-        bool RunModelEngine(MODELCARRIERTYPE& carrier)
+        bool RunModelEngine(GpuModelCarrier& carrier)
         {
-            // Create the proxy with a two-step ctor-create sequence.
-            ModelInitializerProxy<OPERATORTYPE, MODELCARRIERTYPE, RECORDTYPE> initializer(modelInitializerLocation_);
-            initializer.CreateProxy(carrier, configuration_);
-
-            // Let the initializer initialize the model's static state.
-            initializer.Initialize();
-
             // Create and run the model engine.
-            auto modelTicks = configuration_.Configuration()["Model"]["ModelTicks"];
-            auto ticks { 1000 };
-            if (modelTicks.is_number_integer() || modelTicks.is_number_unsigned())
-                ticks = modelTicks.get<int>();
-
-            modelEngine_ = make_unique<ModelEngine<OPERATORTYPE, IMPLEMENTATIONTYPE, MODELCARRIERTYPE, RECORDTYPE>>(
+            modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
                 carrier, 
-                microseconds(ticks),
                 configuration_);
 
-            modelEngine_->RecordFile(configuration_.ComposeRecordPath());
-            modelEngine_->LogFile(configuration_.ExtractRecordDirectory() + modelEngine_->LogFile());
             modelEngine_->Run();
 
             return true;

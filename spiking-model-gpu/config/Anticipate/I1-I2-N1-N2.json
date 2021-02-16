@@ -1,0 +1,12 @@
+{
+    "TriggerEvent" : {
+        "EventType": 2,
+        "NeuronIndex": 10
+    },
+    "MonitorNeurons" : [
+        [ "N1", 510 ],
+        [ "I1", 10 ],
+        [ "N2", 530 ],
+        [ "I2", 30 ]
+    ]
+}

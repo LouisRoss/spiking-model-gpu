@@ -11,10 +11,8 @@
 #include "NeuronNode.h"
 #include "NeuronSynapse.h"
 
-namespace embeddedpenguins::neuron::model
+namespace embeddedpenguins::gpu::neuron::model
 {
-    using namespace embeddedpenguins::neuron::infrastructure;
-
     class NeuronModel
     {
         unsigned long int modelSize_;

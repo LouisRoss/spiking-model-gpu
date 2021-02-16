@@ -259,6 +259,7 @@ else
 endif
 
 ALL_CCFLAGS :=
+ALL_CCFLAGS += -std=c++17
 ALL_CCFLAGS += $(NVCCFLAGS)
 ALL_CCFLAGS += $(EXTRA_NVCCFLAGS)
 ALL_CCFLAGS += $(addprefix -Xcompiler ,$(CCFLAGS))
@@ -278,7 +279,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
-INCLUDES  := -I../include -I/usr/local/cuda/include
+INCLUDES  := -I../include -I../../include -I/usr/local/cuda/include
 LIBRARIES :=
 
 ODIR=obj
@@ -312,11 +313,25 @@ EXEC ?= @echo "[@]"
 endif
 
 ################################################################################
+CC=g++
+IDIR=../include
+
+_COREDEPS = ConfigurationRepository.h IModelInitializer.h ISensorInput.h SensorInputFile.h KeyListener.h Log.h ModelInitializerProxy.h ModelNeuronInitializer.h Recorder.h SensorInputProxy.h
+COREDEPS = $(patsubst %,$(IDIR)/core/%,$(_COREDEPS))
+
+_DEPS = GpuModelCarrier.h GpuModelHelper.h ModelEngine.h ModelEngineContext.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronSynapse.h 
+DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
+
+LIBS= -ldl -lhdf5_serial -ltbb
+
+CCFLAGS=-fpic -pthread -std=c++17
+LFLAGS=-fpic -pthread -std=c++17
+DEBUGFLAG=
 
 # Target rules
 all: build
 
-build: NeuronModel
+build: NeuronModel ModelAnticipateInitializer.so SensorInputFile.so
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -335,19 +350,41 @@ $(ODIR)/mmul_main.o: mmul_main.cpp
 $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-$(ODIR)/NeuronModel.o: NeuronModel.cpp ../include/NeuronModel.h ../include/NeuronCommon.h  ../include/NeuronNode.h ../include/NeuronSynapse.h
-	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+$(ODIR)/NeuronModel.o: NeuronModel.cpp $(DEPS) $(COREDEPS)
+	$(EXEC) $(NVCC) $(DEBUGFLAG) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+$(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp ../include/core/ModelAnticipateInitializer.h $(DEPS) $(COREDEPS)
+	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
+
+$(ODIR)/SensorInputFile.o: SensorInputFile.cpp ../include/core/SensorInputFile.h $(DEPS) $(COREDEPS)
+	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
 NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+	$(EXEC) $(NVCC) $(DEBUGFLAG) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
+	$(EXEC) mkdir -p $(BDIR)
+	$(EXEC) cp $@ $(BDIR)
+
+ModelAnticipateInitializer.so: $(ODIR)/ModelAnticipateInitializer.o
+	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
+	$(EXEC) mkdir -p $(BDIR)
+	$(EXEC) cp $@ $(BDIR)
+
+SensorInputFile.so: $(ODIR)/SensorInputFile.o
+	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)
 
 run: build
 	$(EXEC) ./NeuronModel
 
+debug:
+	make DEBUGFLAG="-g"
+.PHONY: debug
+
 clean:
-	rm -f NeuronModel $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
+	rm -f NeuronModel $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o $(ODIR)/ModelAnticipateInitializer.o $(ODIR)/SensorInputFile.o
 	rm -rf $(BDIR)/NeuronModel
+	rm -rf $(BDIR)/ModelAnticipateInitializer.so
+	rm -rf $(BDIR)/SensorInputFile.so
 
 clobber: clean

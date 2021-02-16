@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-namespace embeddedpenguins::neuron::infrastructure
+namespace embeddedpenguins::gpu::neuron::model
 {
     using std::chrono::milliseconds;
 
@@ -18,6 +18,21 @@ namespace embeddedpenguins::neuron::infrastructure
     constexpr int RefractoryTime = 7;
     constexpr double DecayRate = 0.60;
     constexpr int DecayProcessRate = 1;
+
+#define SynapseSignalTimeMax 8
+#define RecoveryTimeMax 50
+#define SpikeDuration 6
+#define RecoverDuration 8
+//#define RampdownDuration 60
+
+#define TimeSinceRecovery(_RecoveryTime) ((_RecoveryTime>0)? RecoveryTimeMax-_RecoveryTime: 255)
+#define IsSpikeTick(_RecoveryTime) (_RecoveryTime == RecoveryTimeMax)
+#define IsRefractoryTick(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) == SpikeDuration)
+#define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
+//#define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
+#define IsInRecovery(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RecoverDuration)
+#define IsActiveRecently(_RecoveryTime) (_RecoveryTime != 0)
+
 
     const float PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod] = 
         { 2.0, 2.0, 2.0, 2.0, 1.800, 1.800, 1.650, 1.400, 1.400, 1.430, 1.385, 1.385, 1.360, 1.310, 1.310, 1.265, 1.200, 1.200, 1.140, 1.115, 1.115, 1.100, 1.085, 1.085, 1.060, 1.030, 1.030, 1.020, 1.010, 1.010 };

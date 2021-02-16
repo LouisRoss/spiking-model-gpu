@@ -8,7 +8,7 @@
 #include <fcntl.h>
 #include <termios.h>
 
-namespace embeddedpenguins::life::infrastructure
+namespace embeddedpenguins::core::neuron::model
 {
     class KeyListener
     {

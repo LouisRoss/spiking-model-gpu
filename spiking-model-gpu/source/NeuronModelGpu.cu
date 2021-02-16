@@ -2,11 +2,10 @@
 #include <cooperative_groups.h>
 
 #include "NeuronCommon.h"
-#include "NeuronConnection.h"
 #include "NeuronNode.h"
 #include "NeuronSynapse.h"
 
-using namespace embeddedpenguins::neuron::infrastructure;
+using namespace embeddedpenguins::gpu::neuron::model;
 
 //
 // The device model.
@@ -19,17 +18,17 @@ __device__ NeuronSynapse (*g_pSynapses)[SynapticConnectionsPerNode] {};
 //
 // Spike timing constants.
 //
-#define SynapseSignalTimeMax 20
-#define RecoveryTimeMax 200
-#define SpikeDuration 40
-#define RampdownDuration 60
+//#define SynapseSignalTimeMax 20
+//#define RecoveryTimeMax 200
+//#define SpikeDuration 40
+//#define RampdownDuration 60
 
-#define TimeSinceRecovery(_RecoveryTime) ((_RecoveryTime>0)? RecoveryTimeMax-_RecoveryTime: 255)
-#define IsSpikeTick(_RecoveryTime) (_RecoveryTime == RecoveryTimeMax)
-#define IsRefractoryTick(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) == SpikeDuration)
-#define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
-#define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
-#define IsInRecovery(_RecoveryTime) (_RecoveryTime != 0)
+// #define TimeSinceRecovery(_RecoveryTime) ((_RecoveryTime>0)? RecoveryTimeMax-_RecoveryTime: 255)
+// #define IsSpikeTick(_RecoveryTime) (_RecoveryTime == RecoveryTimeMax)
+// #define IsRefractoryTick(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) == SpikeDuration)
+// #define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
+// #define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
+// #define IsInRecovery(_RecoveryTime) (_RecoveryTime != 0)
 
 
 
@@ -146,30 +145,34 @@ __global__ void ModelSynapses()
     {
         auto* neuron = &g_pNeurons[neuronId];
 
-        for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
+        if (!IsInRecovery(neuron->TicksSinceLastSpike))
         {
-            auto* synapse = &g_pSynapses[neuronId][synapseId];
-            auto* presyapticNeuron = synapse->PresynapticNeuron;
-            if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike))
+            for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
             {
-                if (synapse->Type == SynapseType::Excitatory)
-                    neuron->Activation += synapse->Strength;
-                if (synapse->Type == SynapseType::Inhibitory)
-                    neuron->Activation -= synapse->Strength;
-    
-                synapse->TickSinceLastSignal = SynapseSignalTimeMax;
+                auto* synapse = &g_pSynapses[neuronId][synapseId];
+                auto* presyapticNeuron = synapse->PresynapticNeuron;
+                if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
+                {
+                    if (synapse->Type == SynapseType::Excitatory)
+                        neuron->Activation += synapse->Strength;
+                    if (synapse->Type == SynapseType::Inhibitory)
+                        neuron->Activation -= synapse->Strength;
+        
+                    synapse->TickSinceLastSignal = SynapseSignalTimeMax;
+                }
             }
-        }
-
-        if (neuron->Activation > ActivationThreshold)
-        {
-            neuron->TicksSinceLastSpike = RecoveryTimeMax;
-            neuron->Activation = ActivationThreshold;
-        }
-
-        if (neuron->Activation <= -ActivationThreshold)
-        {
-            neuron->Activation = -ActivationThreshold;
+            
+            if (neuron->Activation > (ActivationThreshold + 1))
+            {
+                //neuron->TicksSinceLastSpike = RecoveryTimeMax;
+                neuron->NextTickSpike = true;
+                neuron->Activation = ActivationThreshold + 1;
+            }
+    
+            if (neuron->Activation <= -ActivationThreshold)
+            {
+                neuron->Activation = -ActivationThreshold;
+            }
         }
     }
 }
@@ -213,21 +216,30 @@ __global__ void ModelTimers()
         auto* neuron = &g_pNeurons[neuronId];
         auto recoveryTime = neuron->TicksSinceLastSpike; 
 
-        if (!IsInSpikeTime(recoveryTime))
+        if (neuron->NextTickSpike)
         {
-            neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+            neuron->TicksSinceLastSpike = RecoveryTimeMax;
+            neuron->NextTickSpike = false;
         }
-
-        if (IsRefractoryTick(recoveryTime))
+        else
         {
-            neuron->Activation = 0;
+            if (IsActiveRecently(recoveryTime))
+            {
+                neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+            }
+    
+            if (IsRefractoryTick(recoveryTime))
+            {
+                neuron->Activation = 0;
+            }
+/*    
+            if (IsInRecovery(recoveryTime))
+            {
+                neuron->TicksSinceLastSpike--;
+            }
+*/
         }
-
-        if (IsInRecovery(recoveryTime))
-        {
-            neuron->TicksSinceLastSpike--;
-        }
-
+/*
         for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
         {
             auto* synapse = &g_pSynapses[neuronId][synapseId];
@@ -236,6 +248,7 @@ __global__ void ModelTimers()
                 synapse->TickSinceLastSignal--;
             }
         }
+*/
     }
 }
 
@@ -248,6 +261,60 @@ ModelTimersShim(
     unsigned long int modelSize)
 {
 	const auto kernel_function = ModelTimers;
+	cuda::kernel_t kernel(device, kernel_function);
+
+    const auto threadCount = 256;
+    const auto blockCount = ceil((float)modelSize/(float)threadCount);
+
+	const cuda::grid::dimensions_t grid_dims = {
+		cuda::grid::dimension_t(blockCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+	const cuda::grid::dimensions_t block_dims = {
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+    
+	cuda::launch(kernel_function, launch_configuration);
+	cuda::device::current::get().synchronize();
+}
+
+__global__ void ModelTick()
+{
+    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (neuronId < g_modelSize)
+    {
+        auto* neuron = &g_pNeurons[neuronId];
+        if (neuron->TicksSinceLastSpike > 0)
+        {
+            neuron->TicksSinceLastSpike--;
+        }
+
+        auto& synapsesForNeuron = g_pSynapses[neuronId];
+        for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
+        {
+            auto* synapse = &synapsesForNeuron[synapseId];
+            if (synapse->TickSinceLastSignal > 0)
+            {
+                synapse->TickSinceLastSignal--;
+            }
+        }
+    }
+}
+
+//
+//  Called from CPU.  Launch the CUDA kernel.
+//
+void
+ModelTickShim(
+    cuda::device_t& device,
+    unsigned long int modelSize)
+{
+	const auto kernel_function = ModelTick;
 	cuda::kernel_t kernel(device, kernel_function);
 
     const auto threadCount = 256;

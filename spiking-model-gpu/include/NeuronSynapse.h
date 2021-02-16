@@ -2,7 +2,7 @@
 
 #include "NeuronNode.h"
 
-namespace embeddedpenguins::neuron::infrastructure
+namespace embeddedpenguins::gpu::neuron::model
 {
     using std::numeric_limits;
 

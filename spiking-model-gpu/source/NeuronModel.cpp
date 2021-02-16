@@ -4,20 +4,28 @@
 #include <memory>
 #include <limits>
 
-#include "NeuronModel.h"
-#include "KeyListener.h"
+#include <cuda/runtime_api.hpp>
+
+#include <cuda_runtime_api.h>
+#include "cuda.h"
+
+#include "NeuronRecord.h"
+#include "ModelRunner.h"
+#include "core/KeyListener.h"
 
 using std::cout;
 
-using namespace embeddedpenguins::neuron::infrastructure;
-using embeddedpenguins::life::infrastructure::KeyListener;
+using namespace embeddedpenguins::gpu::neuron::model;
+using embeddedpenguins::core::neuron::model::KeyListener;
 
 //
 // Model parameters.  Any or all of these might become configurable in the future.
 //
-unsigned long int ModelSize { 10000 };
-std::string cls("\033[2J\033[H");
+//unsigned long int ModelSize { 10000 };
+//std::string cls("\033[2J\033[H");
 
+
+#ifdef OLDSTYLE
 //
 // Forward reference of device objects.
 //
@@ -38,7 +46,7 @@ ModelTimersShim(
     cuda::device_t& device,
     unsigned long int modelSize);
 
-namespace embeddedpenguins::neuron::model
+namespace embeddedpenguins::gpu::neuron::model
 {
     using std::numeric_limits;
 
@@ -232,6 +240,13 @@ namespace embeddedpenguins::neuron::model
         }
     }
 }
+#endif //OLDSTYLE
+std::string cls("\033[2J\033[H");
+bool displayOn = false;
+
+char PrintAndListenForQuit(ModelRunner<NeuronRecord>& modelRunner, GpuModelCarrier& carrier);
+void PrintNeuronScan(ModelRunner<NeuronRecord>& modelRunner, GpuModelCarrier& carrier);
+char MapIntensity(int activation);
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -245,9 +260,63 @@ int main(int argc, char* argv[])
         return -1;
 	}
 
-    embeddedpenguins::neuron::model::NeuronModel model(ModelSize);
-    model.InitializeModel();
+    //embeddedpenguins::gpu::neuron::model::NeuronModel model(ModelSize);
+    //model.InitializeModel();
     //model.Run();
 
+    ModelRunner<NeuronRecord> modelRunner(argc, argv);
+    GpuModelCarrier carrier;
+    modelRunner.Run(carrier);
+
+    PrintAndListenForQuit(modelRunner, carrier);
+
+    modelRunner.WaitForQuit();
     return 0;
+}
+
+char PrintAndListenForQuit(ModelRunner<NeuronRecord>& modelRunner, GpuModelCarrier& carrier)
+{
+    char c;
+    {
+        auto listener = KeyListener();
+
+        bool quit {false};
+        while (!quit)
+        {
+            if (displayOn) PrintNeuronScan(modelRunner, carrier);
+            quit = listener.Listen(50'000, c);
+        }
+    }
+
+    cout << "Received keystroke " << c << ", quitting\n";
+    return c;
+}
+
+void PrintNeuronScan(ModelRunner<NeuronRecord>& modelRunner, GpuModelCarrier& carrier)
+{
+    cout << cls;
+/*
+    auto node = begin(carrier.NeuronsHost.get());
+    for (auto high = 25; high; --high)
+    {
+        for (auto wide = 50; wide; --wide)
+        {
+            cout << MapIntensity(node->Activation);
+            node++;
+        }
+        cout << '\n';
+    }
+*/
+    cout << "Iterations: " << modelRunner.getModelEngine().GetIterations() << "  Total work: " << modelRunner.getModelEngine().GetTotalWork() << "                 \n";
+}
+
+char MapIntensity(int activation)
+{
+    static int cutoffs[] = {2,5,15,50};
+
+    if (activation < cutoffs[0]) return ' ';
+    if (activation < cutoffs[1]) return '.';
+    if (activation < cutoffs[2]) return '*';
+    if (activation < cutoffs[3]) return 'o';
+    return 'O';
 }
