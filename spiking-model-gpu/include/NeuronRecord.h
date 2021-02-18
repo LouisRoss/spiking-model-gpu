@@ -31,7 +31,7 @@ namespace embeddedpenguins::gpu::neuron::model
         vector<NeuronRecordConnection> Connections { };
         NeuronRecordSynapse Synapse { };
 
-        NeuronRecord(NeuronRecordType type, unsigned long long int neuronIndex, int activation/*, unsigned int synapseIndex, const NeuronNode& neuronNode*/) :
+        NeuronRecord(NeuronRecordType type, unsigned long long int neuronIndex, int activation, unsigned int synapseIndex = 0, const int synapseStrength = 0) :
             Type(type),
             NeuronIndex(neuronIndex),
             Activation(activation)
@@ -39,8 +39,8 @@ namespace embeddedpenguins::gpu::neuron::model
             switch (type)
             {
                 case NeuronRecordType::InputSignal:
-                    //Synapse.SynapseIndex = synapseIndex;
-                    //Synapse.Strength = neuronNode.Synapses[synapseIndex].Strength;
+                    Synapse.SynapseIndex = synapseIndex;
+                    Synapse.Strength = synapseStrength;
                     break;
 
                 case NeuronRecordType::Decay:

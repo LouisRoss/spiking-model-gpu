@@ -40,8 +40,8 @@ namespace embeddedpenguins::gpu::neuron::model
         GpuModelCarrier& carrier_;
         const ConfigurationRepository& configuration_;
 
-        int width_ { 50 };
-        int height_ { 25 };
+        unsigned int width_ { 50 };
+        unsigned int height_ { 25 };
         unsigned long long int maxIndex_ { };
 
     public:
@@ -55,6 +55,8 @@ namespace embeddedpenguins::gpu::neuron::model
 
         GpuModelCarrier& Carrier() { return carrier_; }
         const json& Configuration() const { return configuration_.Configuration(); }
+        const unsigned int Width() const { return width_; }
+        const unsigned int Height() const { return height_; }
 
         bool AllocateModel(unsigned long int modelSize = 0)
         {
@@ -146,6 +148,11 @@ namespace embeddedpenguins::gpu::neuron::model
             return carrier_.NeuronsHost[source].Type;
         }
 
+        short GetNeuronActivation(const unsigned long int source) const
+        {
+            return carrier_.NeuronsHost[source].Activation;
+        }
+
         void SetExcitatoryNeuronType(const unsigned long int source)
         {
             carrier_.NeuronsHost[source].Type = NeuronType::Excitatory;
@@ -174,7 +181,7 @@ namespace embeddedpenguins::gpu::neuron::model
                     neuron.NextTickSpike = true;
                     neuron.Activation = ActivationThreshold + 1;
 
-                    RECORDTYPE record(NeuronRecordType::InputSignal, inputIndex, neuron.Activation);
+                    RECORDTYPE record(NeuronRecordType::InputSignal, inputIndex, neuron.Activation, 0, ActivationThreshold + 1);
                     recorder.Record(record);
                 }
             }
@@ -202,10 +209,20 @@ namespace embeddedpenguins::gpu::neuron::model
                     RECORDTYPE record(NeuronRecordType::Refractory, neuronIndex, neuron.Activation);
                     recorder.Record(record);
                 }
-                else if (IsActiveRecently(neuron.TicksSinceLastSpike) /*&& neuron.Activation != 0*/)
+                else if (IsActiveRecently(neuron.TicksSinceLastSpike))
                 {
                     RECORDTYPE record(NeuronRecordType::Decay, neuronIndex, neuron.Activation);
                     recorder.Record(record);
+                }
+
+                auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
+                for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
+                {
+                    if (synapsesForNeuron[synapseIndex].TickSinceLastSignal == SynapseSignalTimeMax)
+                    {
+                        RECORDTYPE record(NeuronRecordType::InputSignal, neuronIndex, neuron.Activation, synapseIndex + 1, synapsesForNeuron[synapseIndex].Strength);
+                        recorder.Record(record);
+                    }
                 }
             }
         }

@@ -112,50 +112,17 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             if (!helper_.AllocateModel())
                 return;
-            
-            string modelInitializerLocation { "" };
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
-            if (!executionJson.is_null())
-            {
-                const json& initializerLocationJson = executionJson["InitializerLocation"];
-                if (initializerLocationJson.is_string())
-                    modelInitializerLocation = initializerLocationJson.get<string>();
-            }
 
-            if (modelInitializerLocation.empty())
-            {
-                cout << "No initialization location configured, cannot initialize\n";
+            if (!InitializeModel())
                 return;
-            }
-
-            // Create the proxy with a two-step ctor-create sequence.
-            ModelInitializerProxy<GpuModelHelper<RECORDTYPE>> initializer(modelInitializerLocation);
-            initializer.CreateProxy(helper_);
-
-            // Let the initializer initialize the model's static state.
-            initializer.Initialize();
 
             cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
             cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.SynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
 
-            cout << "Calling DeviceFixupShim(" << carrier_.Device.id() << ", " << carrier_.ModelSize() << ", " << "pNeurons, pSynapses)\n";
             DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get());
-            cout << "Returned from DeviceFixupShim\n";
 
-            string inputStreamerLocation { "" };
-            if (!executionJson.is_null())
-            {
-                const json& inputStreamerJson = executionJson["InputStreamer"];
-                if (inputStreamerJson.is_string())
-                    inputStreamerLocation = inputStreamerJson.get<string>();
-            }
-
-            if (!inputStreamerLocation.empty())
-            {
-                sensorInput_ = make_unique<SensorInputProxy>(inputStreamerLocation);
-                sensorInput_->CreateProxy(context_.Configuration);
-                sensorInput_->Connect("");
-            }
+            if (!ConnectInputStream())
+                return;
 
             context_.Iterations = 1ULL;
             context_.EngineInitialized = true;
@@ -174,26 +141,7 @@ namespace embeddedpenguins::gpu::neuron::model
             {
                 quit = WaitForWorkOrQuit();
                 if (!quit)
-                {
-                    // TODO - investigate pipelining by running ExecutaAStep asynchronously and doing StreamInput for the next tick.
-                    //StreamInput();
-                    auto& streamedInput = sensorInput_->StreamInput(context_.Iterations);
-                    helper_.SpikeInputNeurons(streamedInput, context_.Record);
-
-                    cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-
-                    ModelTickShim(carrier_.Device, carrier_.ModelSize());
-                    ++context_.Iterations;
-
-                    //ExecuteAStep();
-                    ModelSynapsesShim(carrier_.Device, carrier_.ModelSize());
-                    ModelTimersShim(carrier_.Device, carrier_.ModelSize());
-
-                    //RecordOutput();
-                    cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-                    helper_.RecordRelevantNeurons(context_.Record);
-                    helper_.PrintMonitoredNeurons();
-                } 
+                    ExecuteAStep();
             }
             while (!quit);
             auto engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
@@ -228,28 +176,76 @@ namespace embeddedpenguins::gpu::neuron::model
             return quit;
         }
 
-        void StreamInput()
+        bool InitializeModel()
         {
-            auto& streamedInput = sensorInput_->StreamInput(context_.Iterations);
-            helper_.SpikeInputNeurons(streamedInput);
+            string modelInitializerLocation { "" };
+            const json& executionJson = context_.Configuration.Configuration()["Execution"];
+            if (!executionJson.is_null())
+            {
+                const json& initializerLocationJson = executionJson["InitializerLocation"];
+                if (initializerLocationJson.is_string())
+                    modelInitializerLocation = initializerLocationJson.get<string>();
+            }
 
-            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+            if (modelInitializerLocation.empty())
+            {
+                cout << "No initialization location configured, cannot initialize\n";
+                return false;
+            }
+
+            // Create the proxy with a two-step ctor-create sequence.
+            ModelInitializerProxy<GpuModelHelper<RECORDTYPE>> initializer(modelInitializerLocation);
+            initializer.CreateProxy(helper_);
+
+            // Let the initializer initialize the model's static state.
+            initializer.Initialize();
+
+            return true;
+        }
+
+        bool ConnectInputStream()
+        {
+            string inputStreamerLocation { "" };
+            const json& executionJson = context_.Configuration.Configuration()["Execution"];
+            if (!executionJson.is_null())
+            {
+                const json& inputStreamerJson = executionJson["InputStreamer"];
+                if (inputStreamerJson.is_string())
+                    inputStreamerLocation = inputStreamerJson.get<string>();
+            }
+
+            if (!inputStreamerLocation.empty())
+            {
+                sensorInput_ = make_unique<SensorInputProxy>(inputStreamerLocation);
+                sensorInput_->CreateProxy(context_.Configuration);
+                sensorInput_->Connect("");
+            }
+
+            return true;
         }
 
         void ExecuteAStep()
         {
+            // TODO - investigate pipelining by running ExecutaAStep asynchronously and doing StreamInput for the next tick.
+
+            // Get input for this tick, copy input to device.
+            auto& streamedInput = sensorInput_->StreamInput(context_.Iterations);
+            helper_.SpikeInputNeurons(streamedInput, context_.Record);
+            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+
+            // Advance all ticks in the model.
+            ModelTickShim(carrier_.Device, carrier_.ModelSize());
+            ++context_.Iterations;
+
+            // Execute the model.
             ModelSynapsesShim(carrier_.Device, carrier_.ModelSize());
             ModelTimersShim(carrier_.Device, carrier_.ModelSize());
 
-            //cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            //cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
-        }
-
-        void RecordOutput()
-        {
+            // Copy device to host, capture output.
             cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+            cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
             helper_.RecordRelevantNeurons(context_.Record);
-            helper_.PrintMonitoredNeurons();
+            //helper_.PrintMonitoredNeurons();
         }
 
         void Cleanup()

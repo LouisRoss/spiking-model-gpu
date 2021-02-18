@@ -31,7 +31,7 @@ namespace embeddedpenguins::gpu::neuron::model
 #define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
 //#define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
 #define IsInRecovery(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RecoverDuration)
-#define IsActiveRecently(_RecoveryTime) (_RecoveryTime != 0)
+#define IsActiveRecently(_RecoveryTime) ((_RecoveryTime) != 0 && !IsInRecovery(_RecoveryTime))
 
 
     const float PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod] = 

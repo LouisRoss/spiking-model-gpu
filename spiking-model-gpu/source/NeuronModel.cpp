@@ -11,7 +11,8 @@
 
 #include "NeuronRecord.h"
 #include "ModelRunner.h"
-#include "core/KeyListener.h"
+//#include "core/KeyListener.h"
+#include "GpuModelUi.h"
 
 using std::cout;
 
@@ -268,7 +269,13 @@ int main(int argc, char* argv[])
     GpuModelCarrier carrier;
     modelRunner.Run(carrier);
 
-    PrintAndListenForQuit(modelRunner, carrier);
+    //PrintAndListenForQuit(modelRunner, carrier);
+    //modelRunner.WaitForQuit();
+
+    GpuModelHelper<NeuronRecord> helper(carrier, modelRunner.getConfigurationRepository());
+    GpuModelUi ui(modelRunner, helper);
+    ui.ParseArguments(argc, argv);
+    ui.PrintAndListenForQuit();
 
     modelRunner.WaitForQuit();
     return 0;

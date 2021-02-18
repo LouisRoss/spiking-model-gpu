@@ -164,9 +164,13 @@ __global__ void ModelSynapses()
             
             if (neuron->Activation > (ActivationThreshold + 1))
             {
-                //neuron->TicksSinceLastSpike = RecoveryTimeMax;
                 neuron->NextTickSpike = true;
                 neuron->Activation = ActivationThreshold + 1;
+            }
+            else
+            {
+                // Indicate active recently, but after any recent spike time.
+                neuron->TicksSinceLastSpike = RecoveryTimeMax - RecoverDuration;
             }
     
             if (neuron->Activation <= -ActivationThreshold)
@@ -225,7 +229,14 @@ __global__ void ModelTimers()
         {
             if (IsActiveRecently(recoveryTime))
             {
-                neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+                if (neuron->Activation == 0)
+                {
+                    neuron->TicksSinceLastSpike = 0;
+                }
+                else
+                {
+                    neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+                }
             }
     
             if (IsRefractoryTick(recoveryTime))

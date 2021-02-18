@@ -1,7 +1,8 @@
 {
     "TriggerEvent" : {
-        "EventType": 2,
-        "NeuronIndex": 10
+        "EventType": 0,
+        "NeuronIndex": 10,
+        "SynapseIndex": 0
     },
     "MonitorNeurons" : [
         [ "N1", 510 ],

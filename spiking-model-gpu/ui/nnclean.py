@@ -89,7 +89,7 @@ class Cleaner:
             else:
                 tick = int(row[header.index('tick')])
                 event_type = int(row[header.index('Neuron-Event-Type')])
-                if event_type == NeuronRecordType.Spike.value or event_type == NeuronRecordType.Refractory.value or event_type == NeuronRecordType.Decay.value:
+                if event_type == NeuronRecordType.InputSignal.value or event_type == NeuronRecordType.Refractory.value or event_type == NeuronRecordType.Decay.value:
                     active_neuron = int(row[header.index('Neuron-Index')])
                     if active_neuron in monitor_indexes:
                         last_row = copy.copy(self.outputrow)
