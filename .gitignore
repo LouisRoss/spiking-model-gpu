@@ -1,7 +1,10 @@
-spiking-model-gpu/bin/*
 spiking-model-gpu/record/*
-spiking-model-gpu/source/obj/*
-spiking-model-gpu/source/mmul
+spiking-model-gpu/source/obj/*o
+spiking-model-gpu/source/*so
+spiking-model-gpu/bin/*py
+spiking-model-gpu/bin/NeuronModel
+spiking-model-gpu/bin/*so
+spiking-model/bin/__pycache__/*
 spiking-model-gpu/source/NeuronModel
 include/*
 spiking-model-gpu/source/*so

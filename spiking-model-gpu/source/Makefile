@@ -340,23 +340,20 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
-$(ODIR)/mmul.o: mmul.cu
-	@echo "mmul.cu"
-	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
-
-$(ODIR)/mmul_main.o: mmul_main.cpp
-	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
-
 $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
+	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 $(ODIR)/NeuronModel.o: NeuronModel.cpp $(DEPS) $(COREDEPS)
+	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(DEBUGFLAG) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 $(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp ../include/core/ModelAnticipateInitializer.h $(DEPS) $(COREDEPS)
+	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
 $(ODIR)/SensorInputFile.o: SensorInputFile.cpp ../include/core/SensorInputFile.h $(DEPS) $(COREDEPS)
+	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
 NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
