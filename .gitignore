@@ -4,7 +4,9 @@ spiking-model-gpu/source/*so
 spiking-model-gpu/bin/*py
 spiking-model-gpu/bin/NeuronModel
 spiking-model-gpu/bin/*so
-spiking-model/bin/__pycache__/*
+spiking-model-gpu/bin/__pycache__/*
 spiking-model-gpu/source/NeuronModel
 include/*
 spiking-model-gpu/source/*so
+spiking-model-gpu/include/core/*
+spiking-model-gpu/ui/*
