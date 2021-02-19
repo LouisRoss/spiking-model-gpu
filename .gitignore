@@ -8,3 +8,5 @@ spiking-model-gpu/bin/__pycache__/*
 spiking-model-gpu/source/NeuronModel
 include/*
 spiking-model-gpu/source/*so
+spiking-model-gpu/include/core/*
+spiking-model-gpu/ui/*
