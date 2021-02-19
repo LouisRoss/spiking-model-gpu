@@ -316,10 +316,10 @@ endif
 CC=g++
 IDIR=../include
 
-_COREDEPS = ConfigurationRepository.h IModelInitializer.h ISensorInput.h SensorInputFile.h KeyListener.h Log.h ModelInitializerProxy.h ModelNeuronInitializer.h Recorder.h SensorInputProxy.h
+_COREDEPS = ConfigurationRepository.h IModelInitializer.h ISensorInput.h SensorInputFile.h KeyListener.h Log.h ModelInitializerProxy.h ModelNeuronInitializer.h Recorder.h SensorInputProxy.h ModelUi.h
 COREDEPS = $(patsubst %,$(IDIR)/core/%,$(_COREDEPS))
 
-_DEPS = GpuModelCarrier.h GpuModelHelper.h ModelEngine.h ModelEngineContext.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronSynapse.h 
+_DEPS = GpuModelCarrier.h GpuModelHelper.h ModelEngine.h ModelEngineContext.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronSynapse.h GpuModelUi.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 LIBS= -ldl -lhdf5_serial -ltbb

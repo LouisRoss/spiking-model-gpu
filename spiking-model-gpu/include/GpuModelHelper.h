@@ -3,9 +3,6 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
-#include <string>   // Debug only
-#include <map>      // Debug only
-#include <tuple>
 
 #include "nlohmann/json.hpp"
 
@@ -20,12 +17,6 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::cout;
     using std::max_element;
     using std::vector;
-    using std::string;  // Debug only
-    using std::map;     // Debug only
-    using std::tuple;
-    using std::make_tuple;
-    using std::begin;
-    using std::end;
 
     using nlohmann::json;
 
@@ -50,7 +41,6 @@ namespace embeddedpenguins::gpu::neuron::model
             configuration_(configuration)
         {
             LoadOptionalDimensions();
-            LoadOptionalNamedNeurons(); // Debug only
         }
 
         GpuModelCarrier& Carrier() { return carrier_; }
@@ -177,7 +167,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     auto& neuron = carrier_.NeuronsHost[inputIndex];
 
-                    //neuron.TicksSinceLastSpike = RecoveryTimeMax;
                     neuron.NextTickSpike = true;
                     neuron.Activation = ActivationThreshold + 1;
 
@@ -236,96 +225,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 cout << "Insufficient postsynaptic space allocated: need " << requiredSynapseCount << " have " << SynapticConnectionsPerNode << '\n';
 
             return requiredSynapseCount;
-        }
-
-        //////////////////////// Temporory stuff for debugging //////////////////////////////////
-        map<string, tuple<int, int>> namedNeurons_ { };
-
-        void PrintMonitoredNeurons()
-        {
-            std::string cls("\033[2J\033[H");
-            cout << cls;
-
-            for (auto& [neuronName, posTuple] : namedNeurons_)
-            {
-                auto& [ypos, xpos] = posTuple;
-                auto neuronIndex = GetIndex(ypos, xpos);
-                auto& neuron = carrier_.NeuronsHost[neuronIndex];
-                cout << "Neuron " << std::setw(15) << neuronName << " [" << ypos << ", " << xpos << "] = " << std::setw(4) << neuronIndex << ": ";
-                cout << std::setw(5) << neuron.Activation << "(" << std::setw(3) << neuron.TicksSinceLastSpike << ")";
-                cout << std::endl;
-
-                auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
-                for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
-                {
-                    if (*(unsigned long*)&synapsesForNeuron[synapseId].PresynapticNeuron != numeric_limits<unsigned long>::max())
-                    {
-                        cout << std::setw(20) << (unsigned long int)synapsesForNeuron[synapseId].PresynapticNeuron
-                        << "(" << std::setw(3) << (unsigned int)synapsesForNeuron[synapseId].Strength << ")  ";
-                    }
-                }
-                cout << std::endl;
-                cout << std::endl;
-            }
-            cout << std::endl;
-        }
-
-        void LoadOptionalNamedNeurons()
-        {
-            const json& configuration = Configuration();
-            auto& modelSection = configuration["Model"];
-            if (!modelSection.is_null() && modelSection.contains("Neurons"))
-            {
-                auto& namedNeuronsElement = modelSection["Neurons"];
-                if (namedNeuronsElement.is_object())
-                {
-                    for (auto& neuron: namedNeuronsElement.items())
-                    {
-                        auto neuronName = neuron.key();
-                        auto positionArray = neuron.value().get<std::vector<int>>();
-                        auto xpos = positionArray[0];
-                        auto ypos = positionArray[1];
-
-                        namedNeurons_[neuronName] = make_tuple(xpos, ypos);
-                    }
-                }
-            }
-        }
-        void PrintSynapses(int w)
-        {
-            const auto width = 100;
-            const auto height = carrier_.ModelSize() / width;
-
-            for (auto row = 1; row < 4; row++)
-            {
-                for (auto col = 0; col < 6; col++)
-                {
-                    auto& synapsesForNeuron = carrier_.SynapsesHost[row * width + col];
-                    for (auto synapseId = 0; synapseId < 5; synapseId++)
-                    {
-                        cout << std::setw(w) << (unsigned long int)synapsesForNeuron[synapseId].PresynapticNeuron
-                        << "(" << std::setw(3) << (unsigned int)synapsesForNeuron[synapseId].Strength << ")";
-                    }
-                    cout << std::endl;
-                }
-                cout << std::endl;
-            }
-        }
-
-        void PrintNeurons(int w)
-        {
-            const auto width = 100;
-            const auto height = carrier_.ModelSize() / width;
-
-            for (auto row = 0; row < 10; row++)
-            {
-                for (auto col = 0; col < 10; col++)
-                {
-                    auto& neuron = carrier_.NeuronsHost[row * width + col];
-                    cout << std::setw(w) << neuron.Activation << "(" << std::setw(3) << neuron.TicksSinceLastSpike << ")";
-                }
-                cout << std::endl;
-            }
         }
 
     private:

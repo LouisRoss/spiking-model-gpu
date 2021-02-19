@@ -1,7 +1,7 @@
 {
     "Model":
     {
-        "ModelSize": 1000,
+        "ModelSize": 1250,
         "ModelTicks": 100000,
         "InputStreamFileGenerator": "./nngenanticipate.py",
         "Dimensions": [50, 25],

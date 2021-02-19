@@ -12,17 +12,20 @@ namespace embeddedpenguins::gpu::neuron::model
 
     class GpuModelUi : public ModelUi<ModelRunner<NeuronRecord>, GpuModelHelper<NeuronRecord>>
     {
+        unsigned long int modelSize_ {};
         string legend_ {};
 
     public:
         GpuModelUi(ModelRunner<NeuronRecord>& modelRunner, GpuModelHelper<NeuronRecord>& helper) :
             ModelUi(modelRunner, helper)
         {
-            
+            modelSize_ = helper.Carrier().ModelSize();
         }
 
         virtual char EmitToken(unsigned long neuronIndex) override
         {
+            if (neuronIndex >= modelSize_) return '=';
+            
             auto activation = helper_.GetNeuronActivation(neuronIndex);
             return MapIntensity(activation);
         }
