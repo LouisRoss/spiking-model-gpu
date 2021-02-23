@@ -30,10 +30,12 @@ int main(int argc, char* argv[])
 	}
 
     ModelRunner<NeuronRecord> modelRunner(argc, argv);
-    GpuModelCarrier carrier;
-    modelRunner.Run(carrier);
+    const auto& configuration = modelRunner.getConfigurationRepository();
 
-    GpuModelHelper<NeuronRecord> helper(carrier, modelRunner.getConfigurationRepository());
+    GpuModelCarrier carrier;
+    GpuModelHelper<NeuronRecord> helper(carrier, configuration);
+    modelRunner.Run(carrier, helper);
+
     GpuModelUi ui(modelRunner, helper);
     ui.ParseArguments(argc, argv);
     ui.PrintAndListenForQuit();

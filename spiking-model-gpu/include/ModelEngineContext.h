@@ -14,6 +14,8 @@
 #include "core/Log.h"
 #include "core/Recorder.h"
 
+#include "GpuModelHelper.h"
+
 namespace embeddedpenguins::gpu::neuron::model
 {
     using std::string;
@@ -44,7 +46,8 @@ namespace embeddedpenguins::gpu::neuron::model
         mutex Mutex;
         condition_variable Cv;
 
-        const ConfigurationRepository& Configuration {};
+        const ConfigurationRepository& Configuration;
+        GpuModelHelper<RECORDTYPE>& Helper;
         Log Logger {};
         LogLevel LoggingLevel { LogLevel::Status };
         Recorder<RECORDTYPE> Record;
@@ -57,10 +60,11 @@ namespace embeddedpenguins::gpu::neuron::model
         unsigned long long int Iterations { 1LL };
         long long int TotalWork { 0LL };
 
-        ModelEngineContext(const ConfigurationRepository& configuration) :
+        ModelEngineContext(const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
+            Configuration(configuration),
+            Helper(helper),
             Record(Iterations),
-            EnginePeriod(1000),
-            Configuration(configuration)
+            EnginePeriod(1000)
         {
             // Create and run the model engine.
             const json& modelJson = Configuration.Configuration()["Model"];
