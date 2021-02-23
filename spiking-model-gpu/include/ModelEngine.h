@@ -46,10 +46,10 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration) :
-            context_(configuration)
+        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
+            context_(configuration, helper)
         {
-            workerThread_ = thread(ModelEngineThread(context_, carrier));
+            workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, helper));
         }
 
         ~ModelEngine()

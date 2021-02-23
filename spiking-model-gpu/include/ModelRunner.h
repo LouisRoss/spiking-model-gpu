@@ -14,6 +14,7 @@
 #include "core/ModelInitializerProxy.h"
 
 #include "GpuModelCarrier.h"
+#include "GpuModelHelper.h"
 #include "ModelEngine.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -75,12 +76,12 @@ namespace embeddedpenguins::gpu::neuron::model
         // Ensure the model is created and initialized, then start
         // it running asynchronously.
         //
-        bool Run(GpuModelCarrier& carrier)
+        bool Run(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
         {
             if (!valid_)
                 return false;
 
-            return RunModelEngine(carrier);
+            return RunModelEngine(carrier, helper);
         }
 
         //
@@ -139,12 +140,13 @@ namespace embeddedpenguins::gpu::neuron::model
             valid_ = true;
         }
 
-        bool RunModelEngine(GpuModelCarrier& carrier)
+        bool RunModelEngine(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
         {
             // Create and run the model engine.
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
                 carrier, 
-                configuration_);
+                configuration_,
+                helper);
 
             modelEngine_->Run();
 

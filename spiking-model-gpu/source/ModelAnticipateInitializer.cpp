@@ -12,7 +12,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     // the class factories
 
-    extern "C" IModelInitializer<GpuModelHelper<NeuronRecord>>* create(GpuModelHelper<NeuronRecord> helper) {
+    extern "C" IModelInitializer<GpuModelHelper<NeuronRecord>>* create(GpuModelHelper<NeuronRecord>& helper) {
         return new ModelAnticipateInitializer<GpuModelHelper<NeuronRecord>>(helper);
     }
 

@@ -58,8 +58,7 @@ namespace embeddedpenguins::gpu::neuron::model
     class ModelEngineThread
     {
         ModelEngineContext<RECORDTYPE>& context_;
-        GpuModelCarrier& carrier_;
-        GpuModelHelper<RECORDTYPE> helper_;
+        GpuModelHelper<RECORDTYPE>& helper_;
 
         time_point nextScheduledTick_;
         unique_ptr<ISensorInput> sensorInput_ { };
@@ -68,10 +67,9 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelEngineThread() = delete;
         ModelEngineThread(
                         ModelEngineContext<RECORDTYPE>& context, 
-                        GpuModelCarrier& carrier) :
+                        GpuModelHelper<RECORDTYPE>& helper) :
             context_(context),
-            carrier_(carrier),
-            helper_(carrier_, context_.Configuration),
+            helper_(helper),
             nextScheduledTick_(high_resolution_clock::now() + context_.EnginePeriod)
         {
             context_.Logger.SetId(0);
@@ -110,16 +108,16 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         void Initialize()
         {
-            if (!helper_.AllocateModel())
+            if (!context_.Helper.AllocateModel())
                 return;
 
             if (!InitializeModel())
                 return;
 
-            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.SynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().NeuronsHost.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
+            cuda::memory::copy(helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().SynapsesHost.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
 
-            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get());
+            DeviceFixupShim(helper_.Carrier().Device, helper_.Carrier().ModelSize(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().SynapsesDevice.get());
 
             if (!ConnectInputStream())
                 return;
@@ -195,7 +193,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
             // Create the proxy with a two-step ctor-create sequence.
             ModelInitializerProxy<GpuModelHelper<RECORDTYPE>> initializer(modelInitializerLocation);
-            initializer.CreateProxy(helper_);
+            initializer.CreateProxy(context_.Helper);
 
             // Let the initializer initialize the model's static state.
             initializer.Initialize();
@@ -231,19 +229,19 @@ namespace embeddedpenguins::gpu::neuron::model
             // Get input for this tick, copy input to device.
             auto& streamedInput = sensorInput_->StreamInput(context_.Iterations);
             helper_.SpikeInputNeurons(streamedInput, context_.Record);
-            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+            cuda::memory::copy(helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().NeuronsHost.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
 
             // Advance all ticks in the model.
-            ModelTickShim(carrier_.Device, carrier_.ModelSize());
+            ModelTickShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
             ++context_.Iterations;
 
             // Execute the model.
-            ModelSynapsesShim(carrier_.Device, carrier_.ModelSize());
-            ModelTimersShim(carrier_.Device, carrier_.ModelSize());
+            ModelSynapsesShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
+            ModelTimersShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
 
             // Copy device to host, capture output.
-            cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(helper_.Carrier().NeuronsHost.get(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
+            cuda::memory::copy(helper_.Carrier().SynapsesHost.get(), helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
             helper_.RecordRelevantNeurons(context_.Record);
             //helper_.PrintMonitoredNeurons();
         }
