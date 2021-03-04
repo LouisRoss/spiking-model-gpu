@@ -34,7 +34,11 @@ int main(int argc, char* argv[])
 
     GpuModelCarrier carrier;
     GpuModelHelper<NeuronRecord> helper(carrier, configuration);
-    modelRunner.Run(carrier, helper);
+    if (!modelRunner.Run(carrier, helper))
+    {
+        cout << "Cannot run model, stopping\n";
+        return 1;
+    }
 
     GpuModelUi ui(modelRunner, helper);
     ui.ParseArguments(argc, argv);
