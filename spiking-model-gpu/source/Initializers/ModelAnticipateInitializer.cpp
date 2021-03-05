@@ -1,5 +1,5 @@
-#include "core/ConfigurationRepository.h"
-#include "core/ModelAnticipateInitializer.h"
+#include "ConfigurationRepository.h"
+#include "Initializers/ModelAnticipateInitializer.h"
 
 #include "GpuModelHelper.h"
 #include "NeuronRecord.h"

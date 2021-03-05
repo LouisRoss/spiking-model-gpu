@@ -6,9 +6,9 @@
 
 #include "nlohmann/json.hpp"
 
-#include "core/ConfigurationRepository.h"
-#include "core/Recorder.h"
-#include "core/NeuronRecordCommon.h"
+#include "ConfigurationRepository.h"
+#include "Recorder.h"
+#include "NeuronRecordCommon.h"
 
 #include "GpuModelCarrier.h"
 
@@ -91,6 +91,29 @@ namespace embeddedpenguins::gpu::neuron::model
         unsigned long long int GetIndex(const int row, const int column) const
         {
             return row * width_ + column;
+        }
+
+        unsigned long int GetNeuronTicksSinceLastSpike(const unsigned long int source)
+        {
+            return carrier_.NeuronsHost[source].TicksSinceLastSpike;
+        }
+
+        bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId)
+        {
+            auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
+            return ((unsigned long int*)synapsesForNeuron[synapseId].PresynapticNeuron) != 0;
+        }
+
+        int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId)
+        {
+            auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
+            return synapsesForNeuron[synapseId].Strength;
+        }
+
+        unsigned long int GetPresynapticNeuron(const unsigned long int neuronIndex, const unsigned int synapseId)
+        {
+            // Only available in GPU, fake it here.
+            return 0;
         }
 
         void WireInput(unsigned long int sourceNodeIndex, int synapticWeight)

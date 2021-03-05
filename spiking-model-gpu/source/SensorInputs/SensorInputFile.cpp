@@ -1,5 +1,5 @@
-#include "core/ConfigurationRepository.h"
-#include "core/SensorInputFile.h"
+#include "ConfigurationRepository.h"
+#include "SensorInputs/SensorInputFile.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {

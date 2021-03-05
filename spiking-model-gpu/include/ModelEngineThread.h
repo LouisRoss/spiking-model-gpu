@@ -12,11 +12,11 @@
 
 #include "CudaApi.h"
 
-#include "core/ConfigurationRepository.h"
-#include "core/Log.h"
-#include "core/Recorder.h"
-#include "core/ModelInitializerProxy.h"
-#include "core/SensorInputProxy.h"
+#include "ConfigurationRepository.h"
+#include "Log.h"
+#include "Recorder.h"
+#include "ModelInitializerProxy.h"
+#include "SensorInputProxy.h"
 
 #include "ModelEngineContext.h"
 #include "GpuModelHelper.h"

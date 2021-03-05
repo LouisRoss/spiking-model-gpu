@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/ModelUi.h"
+#include "ModelUi.h"
 
 #include "ModelRunner.h"
 #include "GpuModelHelper.h"
