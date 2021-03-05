@@ -335,7 +335,7 @@ DEBUGFLAG=
 # Target rules
 all: build
 
-build: ModelAnticipateInitializer.so
+build: ModelAnticipateInitializer.so ModelLayerInitializer.so ModelSonataInitializer.so
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -353,6 +353,24 @@ $(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp $(DEPS) $(I
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
 ModelAnticipateInitializer.so: $(ODIR)/ModelAnticipateInitializer.o
+	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
+	$(EXEC) mkdir -p $(BDIR)
+	$(EXEC) cp $@ $(BDIR)
+
+$(ODIR)/ModelLayerInitializer.o: ModelLayerInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+	$(EXEC) mkdir -p $(ODIR)
+	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
+
+ModelLayerInitializer.so: $(ODIR)/ModelLayerInitializer.o
+	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
+	$(EXEC) mkdir -p $(BDIR)
+	$(EXEC) cp $@ $(BDIR)
+
+$(ODIR)/ModelSonataInitializer.o: ModelSonataInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+	$(EXEC) mkdir -p $(ODIR)
+	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
+
+ModelSonataInitializer.so: $(ODIR)/ModelLayerInitializer.o
 	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)

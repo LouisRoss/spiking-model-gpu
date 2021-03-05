@@ -23,10 +23,13 @@ SENSORINPUTDEPS = $(patsubst %,$(ILDIR)/SensorInputs/%,$(_SENSORINPUTDEPS))
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h
 SONATADEPS = $(patsubst %,$(ILDIR)/persistence/sonata/%,$(_SONATADEPS))
 
-all: $(BDIR)/SensorInputFile.so
+all: $(BDIR)/SensorInputFile.so 
 .PHONY: all
 
 $(BDIR)/SensorInputFile.so: $(ODIR)/SensorInputFile.o
+	$(CC) -shared -o $@ $^ $(DEBUGFLAG) $(LFLAGS) $(LIBS)
+
+$(BDIR)/SensorSonataFile.so: $(ODIR)/SensorSonataFile.o
 	$(CC) -shared -o $@ $^ $(DEBUGFLAG) $(LFLAGS) $(LIBS)
 
 $(ODIR)/%.o: %.cpp $(DEPS) $(SENSORINPUTDEPS) $(SONATADEPS)
