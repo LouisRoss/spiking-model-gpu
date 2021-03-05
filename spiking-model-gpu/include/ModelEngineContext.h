@@ -10,9 +10,9 @@
 
 #include "nlohmann/json.hpp"
 
-#include "core/ConfigurationRepository.h"
-#include "core/Log.h"
-#include "core/Recorder.h"
+#include "ConfigurationRepository.h"
+#include "Log.h"
+#include "Recorder.h"
 
 #include "GpuModelHelper.h"
 

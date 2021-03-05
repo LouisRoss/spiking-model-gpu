@@ -10,8 +10,8 @@
 
 #include "nlohmann/json.hpp"
 
-#include "core/ConfigurationRepository.h"
-#include "core/ModelInitializerProxy.h"
+#include "ConfigurationRepository.h"
+#include "ModelInitializerProxy.h"
 
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
@@ -54,7 +54,7 @@ namespace embeddedpenguins::gpu::neuron::model
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
 
     public:
-        const ModelEngine<RECORDTYPE>& getModelEngine() const { return *modelEngine_.get(); }
+        const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
         const ConfigurationRepository& getConfigurationRepository() const { return configuration_; }
         const json& Control() const { return configuration_.Control(); }
         const json& Configuration() const { return configuration_.Configuration(); }

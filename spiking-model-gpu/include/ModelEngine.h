@@ -3,7 +3,7 @@
 #include <thread>
 #include <chrono>
 
-#include "core/ConfigurationRepository.h"
+#include "ConfigurationRepository.h"
 #include "ModelEngineContext.h"
 #include "ModelEngineThread.h"
 #include "GpuModelCarrier.h"

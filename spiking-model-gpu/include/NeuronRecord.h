@@ -6,7 +6,7 @@
 #include <limits>
 #include <tuple>
 
-#include "core/NeuronRecordCommon.h"
+#include "NeuronRecordCommon.h"
 
 #include "NeuronCommon.h"
 #include "NeuronNode.h"
