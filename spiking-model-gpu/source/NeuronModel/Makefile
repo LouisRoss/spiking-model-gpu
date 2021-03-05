@@ -283,7 +283,7 @@ INCLUDES  := -I../../include -I../../../include -I/usr/local/cuda/include
 LIBRARIES :=
 
 ODIR=obj
-BDIR=../bin
+BDIR=../../bin
 
 ################################################################################
 
