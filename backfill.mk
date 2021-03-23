@@ -102,26 +102,26 @@ $(COREDIR)/ui/np.py: spiking-model-gpu//ui/np.py
 $(COREDIR)/include/ConfigurationRepository.h: spiking-model-gpu/include/ConfigurationRepository.h
 	cp spiking-model-gpu/include/ConfigurationRepository.h $(COREDIR)/include/
 
-$(COREDIR)/include/KeyListener.h: spiking-model-gpu/include/sdk/KeyListener.h
-	cp spiking-model-gpu/include/sdk/KeyListener.h $(COREDIR)/include/
+$(COREDIR)/include/KeyListener.h: spiking-model-gpu/include/KeyListener.h
+	cp spiking-model-gpu/include/KeyListener.h $(COREDIR)/include/
 
 $(COREDIR)/include/Log.h: spiking-model-gpu/include/Log.h
 	cp spiking-model-gpu/include/Log.h $(COREDIR)/include/
 
-$(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/sdk/ModelInitializerProxy.h
-	cp spiking-model-gpu/include/sdk/ModelInitializerProxy.h $(COREDIR)/include/
+$(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelInitializerProxy.h
+	cp spiking-model-gpu/include/ModelInitializerProxy.h $(COREDIR)/include/
 
-$(COREDIR)/include/ModelUi.h: spiking-model-gpu/include/sdk/ModelUi.h
-	cp spiking-model-gpu/include/sdk/ModelUi.h $(COREDIR)/include/
+$(COREDIR)/include/ModelUi.h: spiking-model-gpu/include/ModelUi.h
+	cp spiking-model-gpu/include/ModelUi.h $(COREDIR)/include/
 
-$(COREDIR)/include/Recorder.h: spiking-model-gpu/include/NeuronRecordCommon.h
+$(COREDIR)/include/NeuronRecordCommon.h: spiking-model-gpu/include/NeuronRecordCommon.h
 	cp spiking-model-gpu/include/NeuronRecordCommon.h $(COREDIR)/include/
 
 $(COREDIR)/include/Recorder.h: spiking-model-gpu/include/Recorder.h
 	cp spiking-model-gpu/include/Recorder.h $(COREDIR)/include/
 
-$(COREDIR)/include/SensorInputProxy.h: spiking-model-gpu/include/sdk/SensorInputProxy.h
-	cp spiking-model-gpu/include/sdk/SensorInputProxy.h $(COREDIR)/include/
+$(COREDIR)/include/SensorInputProxy.h: spiking-model-gpu/include/SensorInputProxy.h
+	cp spiking-model-gpu/include/SensorInputProxy.h $(COREDIR)/include/
 
 # All files from the include/Initializers folder
 $(COREDIR)/include/Initializers/IModelInitializer.h: spiking-model-gpu/include/Initializers/IModelInitializer.h

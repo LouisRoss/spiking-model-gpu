@@ -317,7 +317,7 @@ CC=g++
 IDIR=../../include
 ILDIR=../../../include
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h WorkerInputStreamer.h WorkerOutputStreamer.h WorkerThread.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h

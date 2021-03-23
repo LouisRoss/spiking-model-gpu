@@ -18,6 +18,7 @@
 #include "ModelInitializerProxy.h"
 #include "SensorInputProxy.h"
 #include "WorkerInputStreamer.h"
+#include "WorkerOutputStreamer.h"
 #include "WorkerThread.h"
 
 #include "ModelEngineContext.h"
@@ -65,6 +66,7 @@ namespace embeddedpenguins::gpu::neuron::model
         time_point nextScheduledTick_;
         //unique_ptr<ISensorInput> sensorInput_ { };
         WorkerInputStreamer<RECORDTYPE> inputStreamer_;
+        WorkerOutputStreamer<RECORDTYPE> outputStreamer_;
 
     public:
         ModelEngineThread() = delete;
@@ -74,7 +76,8 @@ namespace embeddedpenguins::gpu::neuron::model
             context_(context),
             helper_(helper),
             nextScheduledTick_(high_resolution_clock::now() + context_.EnginePeriod),
-            inputStreamer_(context_)
+            inputStreamer_(context_),
+            outputStreamer_(context_, helper_)
         {
             context_.Logger.SetId(0);
         }
@@ -124,8 +127,9 @@ namespace embeddedpenguins::gpu::neuron::model
             DeviceFixupShim(helper_.Carrier().Device, helper_.Carrier().ModelSize(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().SynapsesDevice.get());
 
             if (!inputStreamer_.Valid())
-            //if (!inputStreamer_.ConnectInputStream())
-            //if (!ConnectInputStream())
+                return false;
+
+            if (!outputStreamer_.Valid())
                 return false;
 
             context_.Iterations = 1ULL;
@@ -143,6 +147,7 @@ namespace embeddedpenguins::gpu::neuron::model
 //#endif
 
             WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE> inputStreamThread(inputStreamer_);
+            WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE> outputStreamThread(outputStreamer_);
 
             auto quit {false};
             do
@@ -152,7 +157,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     context_.Logger.Logger() << "ModelEngine executing a model step\n";
                     context_.Logger.Logit();
-                    ExecuteAStep(inputStreamThread);
+                    ExecuteAStep(inputStreamThread, outputStreamThread);
                     context_.Logger.Logger() << "ModelEngine completed a model step\n";
                     context_.Logger.Logit();
 
@@ -239,8 +244,9 @@ namespace embeddedpenguins::gpu::neuron::model
             return true;
         }
 */
-//#define STREAM_CPU
-        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE>& inputStreamThread)
+
+        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE>& inputStreamThread,
+                WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE>& outputStreamThread)
         {
             // TODO - investigate pipelining by running ExecutaAStep asynchronously and doing StreamInput for the next tick.
 
@@ -282,7 +288,9 @@ namespace embeddedpenguins::gpu::neuron::model
             // Copy device to host, capture output.
             context_.Logger.Logger() << "  ModelEngine recording neurons\n";
             context_.Logger.Logit();
+            outputStreamThread.WaitForPreviousScan();
             cuda::memory::copy(helper_.Carrier().NeuronsHost.get(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
+            outputStreamThread.Scan();
             //cuda::memory::copy(helper_.Carrier().SynapsesHost.get(), helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
             //helper_.RecordRelevantNeurons(context_.Record);
             //helper_.PrintMonitoredNeurons();
