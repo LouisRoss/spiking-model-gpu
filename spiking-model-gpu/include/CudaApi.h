@@ -23,7 +23,19 @@ DeviceFixupShim(
     NeuronSynapse synapses[][SynapticConnectionsPerNode]);
 
 void
+StreamInputShim(
+    cuda::device_t& device,
+    unsigned long int modelSize,
+    unsigned long int inputSize,
+    unsigned long long int inputNeurons[]);
+
+void
 ModelSynapsesShim(
+    cuda::device_t& device,
+    unsigned long int modelSize);
+
+void
+ModelSynapses2Shim(
     cuda::device_t& device,
     unsigned long int modelSize);
 
@@ -34,5 +46,10 @@ ModelTimersShim(
 
 void
 ModelTickShim(
+    cuda::device_t& device,
+    unsigned long int modelSize);
+
+void
+ModelPlasticityShim(
     cuda::device_t& device,
     unsigned long int modelSize);

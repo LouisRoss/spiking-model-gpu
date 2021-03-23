@@ -120,7 +120,7 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             if (!carrier_.Valid)
             {
-                cout << "GPU helper cannot wire input with model in invalid state\n";
+                //cout << "GPU helper cannot wire input with model in invalid state\n";
                 return;
             }
 
@@ -192,6 +192,8 @@ namespace embeddedpenguins::gpu::neuron::model
 
                     neuron.NextTickSpike = true;
                     neuron.Activation = ActivationThreshold + 1;
+                    //neuron.TicksSinceLastSpike = RecoveryTimeMax;
+                    //cout << "SpikeInputs: Neuron " << inputIndex << " set NextTickSpike true, Activation to " << ActivationThreshold + 1 << ", and TickSinceLastSpike to " << RecoveryTimeMax << "\n";
 
                     RECORDTYPE record(NeuronRecordType::InputSignal, inputIndex, neuron.Activation, 0, ActivationThreshold + 1);
                     recorder.Record(record);
@@ -281,8 +283,10 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.RequiredPostsynapticConnections = std::make_unique<unsigned long[]>(carrier_.NeuronCount);
             carrier_.NeuronsHost = std::make_unique<NeuronNode[]>(carrier_.NeuronCount);
             carrier_.SynapsesHost = std::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
+            carrier_.InputSignalsHost = std::make_unique<unsigned long[]>(InputBufferSize);
             carrier_.NeuronsDevice = cuda::memory::device::make_unique<NeuronNode[]>(carrier_.Device, carrier_.NeuronCount);
             carrier_.SynapsesDevice = cuda::memory::device::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
+            carrier_.InputSignalsDevice = cuda::memory::device::make_unique<unsigned long long[]>(carrier_.Device, InputBufferSize);
 
             carrier_.Valid = true;
             return true;
