@@ -229,6 +229,7 @@ namespace embeddedpenguins::gpu::neuron::model
                     recorder.Record(record);
                 }
 
+#ifdef SYNAPSE_RECORD
                 auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
                 for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
                 {
@@ -238,6 +239,7 @@ namespace embeddedpenguins::gpu::neuron::model
                         recorder.Record(record);
                     }
                 }
+#endif
             }
         }
 

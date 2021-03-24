@@ -7,6 +7,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::chrono::milliseconds;
 
 //#define STREAM_CPU
+//#define SYNAPSE_RECORD
+#define BRANCHLESS_CODE
 
 
     constexpr unsigned int SynapticConnectionsPerNode = 1500;

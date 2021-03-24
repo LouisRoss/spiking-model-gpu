@@ -6,8 +6,6 @@
 #include "NeuronSynapse.h"
 
 
-#define BRANCHLESS_CODE
-
 using namespace embeddedpenguins::gpu::neuron::model;
 
 //
@@ -168,7 +166,7 @@ StreamInput(
         {
             auto& neuron = g_pNeurons[inputNeuronId];
     
-            printf("StreamInput: Neuron %ld, setting NextTickSpike true, and clamping activation at %d\n", inputNeuronId, ActivationThreshold + 1);
+            //printf("StreamInput: Neuron %ld, setting NextTickSpike true, and clamping activation at %d\n", inputNeuronId, ActivationThreshold + 1);
             neuron.NextTickSpike = true;
             neuron.Activation = ActivationThreshold + 1;
         }
