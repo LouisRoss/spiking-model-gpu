@@ -15,8 +15,15 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::lock_guard;
 
     //
+    // Execute a generic long-running task in a new thread.  The specialization
+    // of the task is provided by IMPLEMENTATIONTYPE, which must implement a method:
     //
-    // NOTE the derived class is expected to implement the required methods,
+    //void Process();
+    //
+    // The instance of IMPLEMENTATIONTYPE that executes the task must be provided
+    // in the constructor.
+    //
+    // NOTE the IMPLEMENTATIONTYPE class is expected to implement the required methods,
     //      but no interface exists to enforce the implementation.  Run time
     //      will be faster using compile-time polymorphism with templates rather
     //      than run-time polymorphism, as having the derived class override 
@@ -60,6 +67,9 @@ namespace embeddedpenguins::gpu::neuron::model
             Join();
         }
 
+        //
+        // The thread class calls this method on the new thread.
+        //
         void operator() ()
         {
             while (code_ != WorkCode::Quit)
@@ -77,29 +87,28 @@ namespace embeddedpenguins::gpu::neuron::model
             SignalDone();
         }
 
+        //
+        // Callable from client thread to ensure no work is ongoing.
+        //
         void WaitForPreviousScan()
         {
             if (firstScan_)
-            {
                 return;
-            }
 
             unique_lock<mutex> lock(mutexReturn_);
             cvReturn_.wait(lock, [this]{ return cycleDone_; });
         }
 
+        //
+        // Callable from client thread to start new work.
+        //
         void Scan()
         {
             Scan(WorkCode::Scan);
         }
 
-        void Join()
-        {
-            Scan(WorkCode::Quit);
-            workerThread_.join();
-        }
-
     private:
+        /////////////////////////// Called from worker thread /////////////////////////
         void WaitForSignal()
         {
             unique_lock<mutex> lock(mutex_);
@@ -117,6 +126,7 @@ namespace embeddedpenguins::gpu::neuron::model
             cvReturn_.notify_one();
         }
 
+        /////////////////////////// Called from client thread /////////////////////////
         void Scan(WorkCode code)
         {
             WaitForPreviousScan();
@@ -131,6 +141,12 @@ namespace embeddedpenguins::gpu::neuron::model
             code_ = code;
             cycleDone_ = false;
             cycleStart_ = true;
+        }
+
+        void Join()
+        {
+            Scan(WorkCode::Quit);
+            workerThread_.join();
         }
     };
 }

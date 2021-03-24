@@ -333,6 +333,7 @@ LIBS= -ldl -lhdf5_serial -ltbb
 
 CCFLAGS=-fpic -pthread -std=c++17
 LFLAGS=-fpic -pthread -std=c++17
+LOG=-DNOLOG
 DEBUGFLAG=
 
 # Target rules
@@ -353,7 +354,7 @@ $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu $(DEPS)
 
 $(ODIR)/NeuronModel.o: NeuronModel.cpp $(DEPS) $(INITIALIZERDEPS) $(SENSORINPUTDEPS) $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
-	$(EXEC) $(NVCC) $(DEBUGFLAG) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+	$(EXEC) $(NVCC) $(DEBUGFLAG) $(INCLUDES) $(ALL_CCFLAGS) $(LOG) $(GENCODE_FLAGS) -o $@ -c $<
 
 NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
 	$(EXEC) $(NVCC) $(DEBUGFLAG) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
@@ -364,8 +365,12 @@ run: build
 	$(EXEC) ./NeuronModel
 
 debug:
-	make DEBUGFLAG="-g"
+	make DEBUGFLAG="-g" LOG=""
 .PHONY: debug
+
+log:
+	make LOG=""
+.PHONY: log
 
 clean:
 	rm -f NeuronModel $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o

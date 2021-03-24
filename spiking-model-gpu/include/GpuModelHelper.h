@@ -176,6 +176,7 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.NeuronsHost[source].Type = NeuronType::Inhibitory;
         }
 
+#ifdef STREAM_CPU
         void SpikeInputNeurons(const vector<unsigned long long>& streamedInput, Recorder<RECORDTYPE>& recorder)
         {
             if (!carrier_.Valid)
@@ -201,6 +202,7 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
         }
+#endif
 
         void RecordRelevantNeurons(Recorder<RECORDTYPE>& recorder)
         {

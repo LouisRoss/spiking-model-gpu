@@ -210,75 +210,7 @@ StreamInputShim(
 // NeruonNode.Activation
 // NeuronSynapse.TickSinceLastSignal
 //
-__global__ void ModelSynapses()
-{
-    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (neuronId < g_modelSize)
-    {
-        auto& neuron = g_pNeurons[neuronId];
-
-        if (!IsInRecovery(neuron.TicksSinceLastSpike))
-        {
-            auto& synapsesForNeuron = g_pSynapses[neuronId];
-            for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
-            {
-                auto& synapse = synapsesForNeuron[synapseId];
-                auto* presyapticNeuron = synapse.PresynapticNeuron;
-                if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
-                {
-                    //auto oldActivation = neuron.Activation;
-                    if (synapse.Type == SynapseType::Excitatory)
-                        neuron.Activation += synapse.Strength;
-                    if (synapse.Type == SynapseType::Inhibitory)
-                        neuron.Activation -= synapse.Strength;
-                    //printf("ModelSynapses: Neuron %d got signal from synapse %d with strength %d, changing activation from %d to %d\n", neuronId, synapseId, synapse.Strength, oldActivation, neuron.Activation);
-        
-                    synapse.TickSinceLastSignal = PostsynapticPlasticityPeriod;
-                }
-            }
-
-            if (neuron.Activation > (ActivationThreshold + 1))
-            {
-                //printf("ModelSynapses: Neuron %d above threshold (%d), setting NextTickSpike true, and clamping activation at %d\n", neuronId, neuron.Activation, ActivationThreshold + 1);
-                neuron.NextTickSpike = true;
-                neuron.Activation = ActivationThreshold + 1;
-            }
-            else
-            /*
-            {
-                // Indicate active recently, but after any recent spike time.
-                //printf("ModelSynapses: Neuron %d not above threshold, setting TicksSinceLastSpike from %d to %d\n", neuronId, neuron.TicksSinceLastSpike, RecoveryTimeMax - RecoverDuration);
-                neuron.TicksSinceLastSpike = RecoveryTimeMax - RecoverDuration;
-            }
-            */
-            
-            if (neuron.Activation <= -ActivationThreshold)
-            {
-                neuron.Activation = -ActivationThreshold;
-            }
-        }
-    }
-}
-
-//
-//  Called from CPU.  Launch the CUDA kernel.
-//
-void
-ModelSynapsesShim(
-    cuda::device_t& device,
-    unsigned long int modelSize)
-{
-	const auto kernel_function = ModelSynapses;
-	cuda::kernel_t kernel(device, kernel_function);
-
-    auto launch_configuration = MakeOnedimLaunchConfig(modelSize);
-    
-	cuda::launch(kernel, launch_configuration);
-	cuda::device::current::get().synchronize();
-}
-
-__global__ void ModelSynapses2(int synapseCount, int synapseBase)
+__global__ void ModelSynapses(int synapseCount, int synapseBase)
 {
     __shared__  int tempActivations[1024];
 
@@ -347,11 +279,11 @@ __global__ void ModelSynapses2(int synapseCount, int synapseBase)
 //  Called from CPU.  Launch the CUDA kernel.
 //
 void
-ModelSynapses2Shim(
+ModelSynapsesShim(
     cuda::device_t& device,
     unsigned long int modelSize)
 {
-    const auto kernel_function = ModelSynapses2;
+    const auto kernel_function = ModelSynapses;
     cuda::kernel_t kernel(device, kernel_function);
 
     const int iterations = ceil((float)SynapticConnectionsPerNode/(float)1024);

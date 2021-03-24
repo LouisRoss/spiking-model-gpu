@@ -5,6 +5,12 @@
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    //
+    // Encapsulate the streaming of output to the configured output streaming source
+    // as well as recording in a Process() method, suitable for calling by WorkerThread.
+    // Thus, this class may be called directly or may be provided to WorkerThread
+    // so it may be run in a separate thread.
+    //
     template<class RECORDTYPE>
     class WorkerOutputStreamer
     {

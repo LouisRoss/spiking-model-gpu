@@ -35,11 +35,6 @@ ModelSynapsesShim(
     unsigned long int modelSize);
 
 void
-ModelSynapses2Shim(
-    cuda::device_t& device,
-    unsigned long int modelSize);
-
-void
 ModelTimersShim(
     cuda::device_t& device,
     unsigned long int modelSize);
