@@ -23,8 +23,10 @@ namespace embeddedpenguins::gpu::neuron::model
         std::unique_ptr<unsigned long[]> RequiredPostsynapticConnections { };
         std::unique_ptr<NeuronNode[]> NeuronsHost { };
         std::unique_ptr<NeuronSynapse[][SynapticConnectionsPerNode]> SynapsesHost { };
+        std::unique_ptr<unsigned long[]> InputSignalsHost { };
         cuda::memory::device::unique_ptr<NeuronNode[]> NeuronsDevice { };
         cuda::memory::device::unique_ptr<NeuronSynapse[][SynapticConnectionsPerNode]> SynapsesDevice { };
+        cuda::memory::device::unique_ptr<unsigned long long[]> InputSignalsDevice { };
         bool Valid { false };
 
         const unsigned long int ModelSize() const { return NeuronCount; }

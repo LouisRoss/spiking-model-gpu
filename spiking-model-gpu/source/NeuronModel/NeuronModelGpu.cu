@@ -5,6 +5,7 @@
 #include "NeuronNode.h"
 #include "NeuronSynapse.h"
 
+
 using namespace embeddedpenguins::gpu::neuron::model;
 
 //
@@ -15,23 +16,73 @@ __device__ NeuronNode* g_pNeurons {};
 __device__ NeuronSynapse (*g_pSynapses)[SynapticConnectionsPerNode] {};
 
 
+__device__ const float PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod] = 
+{ 2.0, 2.0, 2.0, 2.0, 1.800, 1.800, 1.650, 1.400, 1.400, 1.430, 1.385, 1.385, 1.360, 1.310, 1.310, 1.265, 1.200, 1.200, 1.140, 1.115, 1.115, 1.100, 1.085, 1.085, 1.060, 1.030, 1.030, 1.020, 1.010, 1.010 };
+
+__device__ const float PostsynapticDecreaseFunction[PostsynapticPlasticityPeriod] = 
+{ 1.0, 0.95, 0.95, 0.90, 0.85, 0.85, 0.80, 0.75, 0.75, 0.70, 0.65, 0.65, 0.60, 0.55, 0.55, 0.5, 0.58, 0.58, 0.66, 0.74, 0.74, 0.82, 0.89, 0.89, 0.96, 1.0, 1.0, 1.0, 1.0, 1.0 };
+
+
+
+/*********************************************************************************************************************/
+/////////////////////////////////////////////////////// Helpers ///////////////////////////////////////////////////////
+
 //
-// Spike timing constants.
+// Make the standard 1D launch configuration, [neurons].
 //
-//#define SynapseSignalTimeMax 20
-//#define RecoveryTimeMax 200
-//#define SpikeDuration 40
-//#define RampdownDuration 60
+cuda::launch_configuration_t MakeOnedimLaunchConfig(unsigned long int modelSize)
+{
+    const auto threadCount = 1024;
+    const auto blockCount = ceil((float)modelSize/(float)threadCount);
 
-// #define TimeSinceRecovery(_RecoveryTime) ((_RecoveryTime>0)? RecoveryTimeMax-_RecoveryTime: 255)
-// #define IsSpikeTick(_RecoveryTime) (_RecoveryTime == RecoveryTimeMax)
-// #define IsRefractoryTick(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) == SpikeDuration)
-// #define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
-// #define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
-// #define IsInRecovery(_RecoveryTime) (_RecoveryTime != 0)
+	const cuda::grid::dimensions_t grid_dims = {
+		cuda::grid::dimension_t(blockCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+	const cuda::grid::dimensions_t block_dims = {
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1)
+	};
+
+    return cuda::make_launch_config(grid_dims, block_dims);
+}
 
 
+//
+// Make the standard 2D launch configuration, [neurons, synapses].
+//
+cuda::launch_configuration_t MakeTwodimLaunchConfig(unsigned long int modelSize)
+{
+    const auto threadCount = 32;
+    const auto blockNeuronCount = ceil((float)modelSize/(float)threadCount);
+    const auto blockSynapseCount = ceil((float)SynapticConnectionsPerNode/(float)threadCount);
 
+	const cuda::grid::dimensions_t grid_dims = {
+		cuda::grid::dimension_t(blockNeuronCount),
+		cuda::grid::dimension_t(blockSynapseCount),
+		cuda::grid::dimension_t(1)
+	};
+	const cuda::grid::dimensions_t block_dims = {
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(threadCount),
+		cuda::grid::dimension_t(1)
+	};
+
+    return cuda::make_launch_config(grid_dims, block_dims);
+}
+
+
+/*********************************************************************************************************************/
+///////////////////////////////////////////////////// DeviceFixup /////////////////////////////////////////////////////
+
+//
+// Device kernel.
+// Since pointers are not valid across the host-device barrier, the host
+// will wire connections using indexes rather than pointers.  Here we replace
+// the indexes with device pointers directly to memory.
+//
 __global__ 
 void
 DeviceFixup(
@@ -93,89 +144,132 @@ DeviceFixupShim(
 	cuda::device::current::get().synchronize();
 }
 
-#if false
-__global__ void ModelSynapses_reduce(unsigned long int modelSize)
+/*********************************************************************************************************************/
+///////////////////////////////////////////////////// StreamInput /////////////////////////////////////////////////////
+
+//
+// Device kernel.
+//
+__global__ 
+void
+StreamInput(
+    unsigned long int inputSize,
+    unsigned long long int inputNeurons[])
 {
-    __shared__ LocalNeuronSynapse synapses[BlockSizeSynapse];
+    auto neuronIndex = blockIdx.x * blockDim.x + threadIdx.x;
 
-    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
-    auto synapseId = blockIdx.y * blockDim.y + threadIdx.y;
-
-    synapses[threadIdx.y].Modifier = 0;     // Assume no active presynaptic neuron.
-    NeuronNode* presyapticNeuron = g_pSynapses[neuronId][synapseId].PresynapticNeuron;
-    if (presyapticNeuron != nullptr)
+    if (neuronIndex < inputSize)
     {
-        synapses[threadIdx.y].Strength = g_pSynapses[neuronId][synapseId].Strength;
-        synapses[threadIdx.y].Modifier = IsSpikeTick(presyapticNeuron->TicksSinceLastSpike) ? 1 : 0;
-        synapses[threadIdx.y].Modifier *= g_pSynapses[neuronId][synapseId].Type == SynapseType::Inhibitory ? -1 : 1;
-    }
-    synapses[threadIdx.y].NeuronActivation = g_pNeurons[neuronId].Activation;
-    __syncthreads();
-
-    for (int stride = blockDim.y / 2; stride > 0; stride >>= 1)
-    {
-        if (threadIdx.y < stride)
+        auto inputNeuronId = inputNeurons[neuronIndex];
+    
+        if (inputNeuronId < g_modelSize)
         {
-            synapses[threadIdx.y].NeuronActivation += (synapses[threadIdx.y].Strength * synapses[threadIdx.y].Modifier);
-            synapses[threadIdx.y].NeuronActivation += (synapses[threadIdx.y + stride].Strength * synapses[threadIdx.y + stride].Modifier);
-        }
-
-        __syncthreads();
-    }
-
-    if (threadIdx.y == 0)
-    {
-        if (blockDim.y == 1)
-        {
-            g_pNeurons[neuronId].Activation = synapses[0].NeuronActivation;
-        }
-        else
-        {
-            g_SynapseScratchpad[blockIdx.y].NeuronActivation = synapses[0].NeuronActivation;
+            auto& neuron = g_pNeurons[inputNeuronId];
+    
+            //printf("StreamInput: Neuron %ld, setting NextTickSpike true, and clamping activation at %d\n", inputNeuronId, ActivationThreshold + 1);
+            neuron.NextTickSpike = true;
+            neuron.Activation = ActivationThreshold + 1;
         }
     }
 }
+
+//
+//  Called from CPU.  Launch the CUDA kernel.
+//
+void
+StreamInputShim(
+    cuda::device_t& device,
+    unsigned long int modelSize,
+    unsigned long int inputSize,
+    unsigned long long int inputNeurons[])
+{
+	const auto kernel_function = StreamInput;
+	cuda::kernel_t kernel(device, kernel_function);
+
+    auto launch_configuration = MakeOnedimLaunchConfig(inputSize);
+    
+	cuda::launch(kernel, launch_configuration, inputSize, inputNeurons);
+	cuda::device::current::get().synchronize();
+}
+
+/*********************************************************************************************************************/
+//////////////////////////////////////////////////// ModelSynapses ////////////////////////////////////////////////////
+
+//
+// Device kernel.
+// Examine all neurons that are presynaptic to the neuron indicated by the 1-dimensional block.x
+// launch configuration.  Modify this neuron's activation level according to the states of the
+// various presynaptic neurons.
+// Also, mark each synapse that participated in modifying the neuron activation by starting a
+// timer that can be used during learning.
+// Also, mark any neuron that exceeds threshold with a boolean flag for processing in a later kernel.
+//
+// Modifies:
+// NeuronNode.TicksSinceLastSpike
+// NeuronNode.NextTickSpike
+// NeruonNode.Activation
+// NeuronSynapse.TickSinceLastSignal
+//
+__global__ void ModelSynapses(int synapseCount, int synapseBase)
+{
+    __shared__  int tempActivations[1024];
+
+    auto neuronId = blockIdx.x;
+    auto synapseOffset = threadIdx.x;
+    auto synapseId =  synapseBase + synapseOffset;
+
+    if (neuronId < g_modelSize && synapseId < SynapticConnectionsPerNode)
+    {
+        auto& neuron = g_pNeurons[neuronId];
+        
+        if (!IsInRecovery(neuron.TicksSinceLastSpike))
+        {
+            tempActivations[synapseOffset] = 0;
+            auto& synapse = g_pSynapses[neuronId][synapseId];
+            auto* presyapticNeuron = synapse.PresynapticNeuron;
+            
+#ifdef BRANCHLESS_CODE
+            auto gate = presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime);
+            auto eGate = (synapse.Type == SynapseType::Excitatory);
+            auto iGate = (synapse.Type == SynapseType::Inhibitory);
+            tempActivations[synapseOffset] = gate * (eGate * synapse.Strength - iGate * synapse.Strength);
+            synapse.TickSinceLastSignal = gate * PostsynapticPlasticityPeriod + (1 - gate) * synapse.TickSinceLastSignal;
+#else
+            if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
+            {
+                if (synapse.Type == SynapseType::Excitatory)
+                tempActivations[synapseOffset] = synapse.Strength;
+                if (synapse.Type == SynapseType::Inhibitory)
+                tempActivations[synapseOffset] = -synapse.Strength;
+                
+                synapse.TickSinceLastSignal = PostsynapticPlasticityPeriod;
+            }
 #endif
 
-__global__ void ModelSynapses()
-{
-    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
-
-    if (neuronId < g_modelSize)
-    {
-        auto* neuron = &g_pNeurons[neuronId];
-
-        if (!IsInRecovery(neuron->TicksSinceLastSpike))
-        {
-            for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
-            {
-                auto* synapse = &g_pSynapses[neuronId][synapseId];
-                auto* presyapticNeuron = synapse->PresynapticNeuron;
-                if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
-                {
-                    if (synapse->Type == SynapseType::Excitatory)
-                        neuron->Activation += synapse->Strength;
-                    if (synapse->Type == SynapseType::Inhibitory)
-                        neuron->Activation -= synapse->Strength;
-        
-                    synapse->TickSinceLastSignal = SynapseSignalTimeMax;
-                }
-            }
+            __syncthreads();
             
-            if (neuron->Activation > (ActivationThreshold + 1))
+            if (synapseOffset == 0)
             {
-                neuron->NextTickSpike = true;
-                neuron->Activation = ActivationThreshold + 1;
-            }
-            else
-            {
-                // Indicate active recently, but after any recent spike time.
-                neuron->TicksSinceLastSpike = RecoveryTimeMax - RecoverDuration;
-            }
-    
-            if (neuron->Activation <= -ActivationThreshold)
-            {
-                neuron->Activation = -ActivationThreshold;
+                //auto oldActivation = neuron.Activation;
+                auto activation = neuron.Activation;
+                for (auto activationId = 0; activationId < synapseCount; activationId++)
+                {
+                    activation += tempActivations[activationId];
+                }
+                
+                neuron.Activation = activation;
+                //printf("ModelSynapses: Neuron %d got signal from synapse %d with strength %d, changing activation from %d to %d\n", neuronId, synapseId, synapse.Strength, oldActivation, neuron.Activation);
+                
+                if (neuron.Activation > (ActivationThreshold + 1))
+                {
+                    //printf("ModelSynapses: Neuron %d above threshold (%d), setting NextTickSpike true, and clamping activation at %d\n", neuronId, neuron.Activation, ActivationThreshold + 1);
+                    neuron.NextTickSpike = true;
+                    neuron.Activation = ActivationThreshold + 1;
+                }
+                else if (neuron.Activation <= -ActivationThreshold)
+                {
+                    neuron.Activation = -ActivationThreshold;
+                }
             }
         }
     }
@@ -189,28 +283,50 @@ ModelSynapsesShim(
     cuda::device_t& device,
     unsigned long int modelSize)
 {
-	const auto kernel_function = ModelSynapses;
-	cuda::kernel_t kernel(device, kernel_function);
+    const auto kernel_function = ModelSynapses;
+    cuda::kernel_t kernel(device, kernel_function);
 
-    const auto threadCount = 256;
-    const auto blockCount = ceil((float)modelSize/(float)threadCount);
+    const int iterations = ceil((float)SynapticConnectionsPerNode/(float)1024);
+    const int synapsesPerIteration = SynapticConnectionsPerNode / iterations;
+    const int synapsesLastIteration = SynapticConnectionsPerNode - (synapsesPerIteration * (iterations - 1));
 
-	const cuda::grid::dimensions_t grid_dims = {
-		cuda::grid::dimension_t(blockCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-	const cuda::grid::dimensions_t block_dims = {
-		cuda::grid::dimension_t(threadCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
-    
-	cuda::launch(kernel_function, launch_configuration);
-	cuda::device::current::get().synchronize();
+    for (auto iteration = 0; iteration < iterations; iteration++)
+    {
+        auto synapseCount = (iteration == iterations - 1) ? synapsesLastIteration : synapsesPerIteration;
+        const cuda::grid::dimensions_t grid_dims = {
+            cuda::grid::dimension_t(modelSize),
+            cuda::grid::dimension_t(1),
+            cuda::grid::dimension_t(1)
+        };    
+        const cuda::grid::dimensions_t block_dims = {
+            cuda::grid::dimension_t(synapseCount),
+            cuda::grid::dimension_t(1),
+            cuda::grid::dimension_t(1)
+        };    
+
+        auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+        cuda::launch(kernel, launch_configuration, synapseCount, iteration * synapsesPerIteration);
+        
+        device.synchronize();
+    }    
 }
 
+/*********************************************************************************************************************/
+///////////////////////////////////////////////////// ModelTimers /////////////////////////////////////////////////////
+
+//
+// Device kernel.
+// Based on the outcomes from the ModelSynapses() kernel, capture the
+// correct timer for a neuron, plus modify its activation.
+//
+// NOTE: This kernel depends on the ModelSynapses() kernel, and must not
+//       be run in parallel with it.
+//
+// Modifies:
+// NeuronNode.TicksSinceLastSpike
+// NeuronNode.NextTickSpike
+// NeruonNode.Activation
+//
 __global__ void ModelTimers()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
@@ -222,44 +338,23 @@ __global__ void ModelTimers()
 
         if (neuron->NextTickSpike)
         {
+            //printf("ModelTimers: Neuron %d activation crossed spike threshold, setting TickSinceLastSpike to %d\n", neuronId, RecoveryTimeMax);
             neuron->TicksSinceLastSpike = RecoveryTimeMax;
-            neuron->NextTickSpike = false;
         }
         else
         {
-            if (IsActiveRecently(recoveryTime))
-            {
-                if (neuron->Activation == 0)
-                {
-                    neuron->TicksSinceLastSpike = 0;
-                }
-                else
-                {
-                    neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
-                }
-            }
-    
             if (IsRefractoryTick(recoveryTime))
             {
+                //printf("ModelTimers: Neuron %d reached refractory tick, setting activation to 0\n", neuronId);
                 neuron->Activation = 0;
             }
-/*    
-            if (IsInRecovery(recoveryTime))
+            else if (!IsInSpikeTime(recoveryTime))
             {
-                neuron->TicksSinceLastSpike--;
-            }
-*/
-        }
-/*
-        for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
-        {
-            auto* synapse = &g_pSynapses[neuronId][synapseId];
-            if (synapse->TickSinceLastSignal > 0)
-            {
-                synapse->TickSinceLastSignal--;
+                //auto oldActivation = neuron->Activation;
+                neuron->Activation = (short int)((double)neuron->Activation * DecayRate);
+                //if (oldActivation != 0) printf("ModelTimers: Neuron %d decaying activation from %d to %d\n", neuronId, oldActivation, neuron->Activation);
             }
         }
-*/
     }
 }
 
@@ -274,45 +369,104 @@ ModelTimersShim(
 	const auto kernel_function = ModelTimers;
 	cuda::kernel_t kernel(device, kernel_function);
 
-    const auto threadCount = 256;
-    const auto blockCount = ceil((float)modelSize/(float)threadCount);
-
-	const cuda::grid::dimensions_t grid_dims = {
-		cuda::grid::dimension_t(blockCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-	const cuda::grid::dimensions_t block_dims = {
-		cuda::grid::dimension_t(threadCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+    auto launch_configuration = MakeOnedimLaunchConfig(modelSize);
     
-	cuda::launch(kernel_function, launch_configuration);
+	cuda::launch(kernel, launch_configuration);
 	cuda::device::current::get().synchronize();
 }
 
+/*********************************************************************************************************************/
+/////////////////////////////////////////////////// ModelPlasticity ///////////////////////////////////////////////////
+
+//
+// Device kernel.
+// Based on the outcomes from the ModelSynapses() and ModelTimers() kernels, 
+//
+// NOTE: This kernel depends on the ModelSynapses() and ModelTimers() kernels, 
+//       and must not be run in parallel with either of them.
+//
+// Modifies:
+//
+__global__ void ModelPlasticity()
+{
+    auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
+    auto synapseId = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (neuronId < g_modelSize && synapseId < SynapticConnectionsPerNode)
+    {
+        auto& neuron = g_pNeurons[neuronId];
+        auto& synapse = g_pSynapses[neuronId][synapseId];
+
+        if (neuron.NextTickSpike)
+        {
+            if (synapse.TickSinceLastSignal > 0)
+            {
+                auto newStrength = synapse.Strength * PostsynapticIncreaseFunction[synapse.TickSinceLastSignal - 1];
+                if (newStrength > MaxSynapseStrength) newStrength = MaxSynapseStrength;
+                if (newStrength < MinSynapseStrength) newStrength = MinSynapseStrength;
+                //printf("ModelPlasticity: Neuron %d spiked, synapse %d was signaled %d ticks ago, changing synaptic strength from %d to %d\n", neuronId, synapseId, PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal, (int)synapse.Strength, (int)newStrength);
+                synapse.Strength = newStrength;
+            }
+        }
+    }
+}
+
+//
+//  Called from CPU.  Launch the CUDA kernel.
+//
+void
+ModelPlasticityShim(
+    cuda::device_t& device,
+    unsigned long int modelSize)
+{
+	const auto kernel_function = ModelPlasticity;
+	cuda::kernel_t kernel(device, kernel_function);
+
+    auto launch_configuration = MakeTwodimLaunchConfig(modelSize);
+
+	cuda::launch(kernel, launch_configuration);
+	cuda::device::current::get().synchronize();
+}
+
+/*********************************************************************************************************************/
+////////////////////////////////////////////////////// ModelTick //////////////////////////////////////////////////////
+
+//
+// Device kernel.
+// Based on the outcomes from the ModelSynapses() and ModelTimers() kernels, 
+// Run all currently active timers in a neuron and its synapses.
+//
+// NOTE: This kernel depends on the ModelSynapses() and ModelTimers() kernels, 
+//       and must not be run in parallel with either of them.
+//
+// Modifies:
+// NeuronNode.TicksSinceLastSpike
+// NeuronSynapse.TickSinceLastSignal
+//
 __global__ void ModelTick()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
+    auto synapseId = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if (neuronId < g_modelSize)
+    if (neuronId < g_modelSize && synapseId < SynapticConnectionsPerNode)
     {
-        auto* neuron = &g_pNeurons[neuronId];
-        if (neuron->TicksSinceLastSpike > 0)
-        {
-            neuron->TicksSinceLastSpike--;
-        }
+        auto& neuron = g_pNeurons[neuronId];
+        auto& synapse = g_pSynapses[neuronId][synapseId];
 
-        auto& synapsesForNeuron = g_pSynapses[neuronId];
-        for (auto synapseId = 0; synapseId < PresynapticConnectionsPerNode; synapseId++)
+        if (synapseId == 0 && neuron.TicksSinceLastSpike > 0)
         {
-            auto* synapse = &synapsesForNeuron[synapseId];
-            if (synapse->TickSinceLastSignal > 0)
-            {
-                synapse->TickSinceLastSignal--;
-            }
+            //auto oldTicks = neuron.TicksSinceLastSpike;
+            neuron.TicksSinceLastSpike--;
+            //printf("ModelTick:   Neuron %d ticking TicksSinceLastSpike for from %d to %d\n", neuronId, oldTicks, neuron.TicksSinceLastSpike);
+        }
+        
+        neuron.NextTickSpike = false;
+
+        if (synapse.TickSinceLastSignal > 0)
+        {
+            //auto oldTicks = synapse.TickSinceLastSignal;
+            synapse.TickSinceLastSignal--;
+            //printf("ModelTick:   Neuron %d synapse %d ticking TickSinceLastSignal for from %d to %d\n", neuronId, synapseId, oldTicks, synapse.TickSinceLastSignal);
         }
     }
 }
@@ -328,22 +482,9 @@ ModelTickShim(
 	const auto kernel_function = ModelTick;
 	cuda::kernel_t kernel(device, kernel_function);
 
-    const auto threadCount = 256;
-    const auto blockCount = ceil((float)modelSize/(float)threadCount);
-
-	const cuda::grid::dimensions_t grid_dims = {
-		cuda::grid::dimension_t(blockCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-	const cuda::grid::dimensions_t block_dims = {
-		cuda::grid::dimension_t(threadCount),
-		cuda::grid::dimension_t(1),
-		cuda::grid::dimension_t(1)
-	};
-    auto launch_configuration = cuda::make_launch_config(grid_dims, block_dims);
+    auto launch_configuration = MakeTwodimLaunchConfig(modelSize);
     
-	cuda::launch(kernel_function, launch_configuration);
+	cuda::launch(kernel, launch_configuration);
 	cuda::device::current::get().synchronize();
 }
 
