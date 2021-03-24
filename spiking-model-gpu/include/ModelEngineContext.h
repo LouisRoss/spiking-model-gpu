@@ -56,6 +56,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         microseconds EnginePeriod;
         atomic<bool> EngineInitialized { false };
+        atomic<bool> EngineInitializeFailed { false };
         microseconds PartitionTime { };
         unsigned long long int Iterations { 1LL };
         long long int TotalWork { 0LL };

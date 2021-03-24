@@ -97,6 +97,8 @@ namespace embeddedpenguins::gpu::neuron::model
             cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
             Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
             cout << "Done\n";
+
+            context_.Run = false;
         }
 
         unsigned long long int GetIterations()
@@ -108,10 +110,16 @@ namespace embeddedpenguins::gpu::neuron::model
         bool Initialize()
         {
             if (!context_.Helper.AllocateModel())
+            {
+                context_.EngineInitializeFailed = true;
                 return false;
+            }
 
             if (!InitializeModel())
+            {
+                context_.EngineInitializeFailed = true;
                 return false;
+            }
 
             cuda::memory::copy(helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().NeuronsHost.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
             cuda::memory::copy(helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().SynapsesHost.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
@@ -119,10 +127,16 @@ namespace embeddedpenguins::gpu::neuron::model
             DeviceFixupShim(helper_.Carrier().Device, helper_.Carrier().ModelSize(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().SynapsesDevice.get());
 
             if (!inputStreamer_.Valid())
+            {
+                context_.EngineInitializeFailed = true;
                 return false;
+            }
 
             if (!outputStreamer_.Valid())
+            {
+                context_.EngineInitializeFailed = true;
                 return false;
+            }
 
             context_.Iterations = 1ULL;
             context_.EngineInitialized = true;

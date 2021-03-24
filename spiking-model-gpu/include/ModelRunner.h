@@ -148,9 +148,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 configuration_,
                 helper);
 
-            modelEngine_->Run();
-
-            return true;
+            return modelEngine_->Run();
         }
     };
 }

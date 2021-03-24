@@ -60,14 +60,16 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
     public:
-        void Run()
+        bool Run()
         {
             startTime_ = high_resolution_clock::now();
             context_.Run = true;
 
             // Don't return until the woker thread is initialized.
-            while (!context_.EngineInitialized)
+            while (!context_.EngineInitialized && !context_.EngineInitializeFailed)
                 std::this_thread::yield();
+
+            return context_.EngineInitialized && !context_.EngineInitializeFailed;
         }
 
         void Quit()
