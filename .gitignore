@@ -8,6 +8,7 @@ spiking-model-gpu/source/Initializers/*so
 spiking-model-gpu/source/Initializers/obj/*
 spiking-model-gpu/source/SensorInputs/*so
 spiking-model-gpu/source/SensorInputs/obj/*
+spiking-model-gpu/source/libsocket/*
 include/*
 spiking-model-gpu/include/ConfigurationRepository.h
 spiking-model-gpu/include/KeyListener.h
