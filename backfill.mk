@@ -17,7 +17,7 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py 
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h ModelUi.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h ModelUi.h ICommandControlAcceptor.h CommandControlSocket.h CommandControlListenSocket.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
@@ -113,6 +113,15 @@ $(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelIniti
 
 $(COREDIR)/include/ModelUi.h: spiking-model-gpu/include/ModelUi.h
 	cp spiking-model-gpu/include/ModelUi.h $(COREDIR)/include/
+
+$(COREDIR)/include/ICommandControlAcceptor.h: spiking-model-gpu/include/ICommandControlAcceptor.h
+	cp spiking-model-gpu/include/ICommandControlAcceptor.h $(COREDIR)/include/
+
+$(COREDIR)/include/CommandControlSocket.h: spiking-model-gpu/include/CommandControlSocket.h
+	cp spiking-model-gpu/include/CommandControlSocket.h $(COREDIR)/include/
+
+$(COREDIR)/include/CommandControlListenSocket.h: spiking-model-gpu/include/CommandControlListenSocket.h
+	cp spiking-model-gpu/include/CommandControlListenSocket.h $(COREDIR)/include/
 
 $(COREDIR)/include/NeuronRecordCommon.h: spiking-model-gpu/include/NeuronRecordCommon.h
 	cp spiking-model-gpu/include/NeuronRecordCommon.h $(COREDIR)/include/

@@ -11,7 +11,7 @@
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
                 "-d",
-                "a1"
+                "l1"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/spiking-model-gpu/bin",

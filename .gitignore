@@ -15,6 +15,9 @@ spiking-model-gpu/include/KeyListener.h
 spiking-model-gpu/include/Log.h
 spiking-model-gpu/include/ModelInitializerProxy.h
 spiking-model-gpu/include/ModelUi.h
+spiking-model-gpu/include/ICommandControlAcceptor.h
+spiking-model-gpu/include/CommandControlListenSocket.h
+spiking-model-gpu/include/CommandControlSocket.h
 spiking-model-gpu/include/NeuronRecordCommon.h
 spiking-model-gpu/include/Recorder.h
 spiking-model-gpu/include/SensorInputProxy.h
