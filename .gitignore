@@ -23,3 +23,7 @@ spiking-model-gpu/include/Recorder.h
 spiking-model-gpu/include/SensorInputProxy.h
 spiking-model-gpu/include/Initializers/*
 spiking-model-gpu/include/SensorInputs/*
+spiking-model-gpu/include/CommandControlHandler.h
+spiking-model-gpu/include/IQueryHandler.h
+spiking-model-gpu/include/QueryResponseListenSocket.h
+spiking-model-gpu/include/QueryResponseSocket.h

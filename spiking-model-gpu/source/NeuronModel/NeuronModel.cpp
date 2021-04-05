@@ -16,6 +16,8 @@
 #include "GpuModelUi.h"
 #include "ICommandControlAcceptor.h"
 #include "CommandControlListenSocket.h"
+#include "QueryResponseListenSocket.h"
+#include "CommandControlHandler.h"
 
 using std::cout;
 using std::unique_ptr;
@@ -25,6 +27,8 @@ using namespace embeddedpenguins::gpu::neuron::model;
 using embeddedpenguins::core::neuron::model::KeyListener;
 using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
 using embeddedpenguins::core::neuron::model::CommandControlListenSocket;
+using embeddedpenguins::core::neuron::model::QueryResponseListenSocket;
+using embeddedpenguins::core::neuron::model::CommandControlHandler;
 using embeddedpenguins::gpu::neuron::model::GpuModelCarrier;
 using embeddedpenguins::gpu::neuron::model::GpuModelHelper;
 using embeddedpenguins::gpu::neuron::model::GpuModelUi;
@@ -59,7 +63,19 @@ int main(int argc, char* argv[])
     {
         //unique_ptr<ICommandControlAcceptor> commandControl = make_unique<CommandControlListenSocket>("localhost", "8000");
 
-        GpuModelUi ui(modelRunner, helper, make_unique<CommandControlListenSocket>("localhost", "8000"));
+        //GpuModelUi ui(modelRunner, helper, make_unique<CommandControlListenSocket>("localhost", "8000"));
+        GpuModelUi ui(
+            modelRunner, 
+            helper, 
+            std::move(make_unique<QueryResponseListenSocket>(
+                "localhost", 
+                "8000",
+                [](){
+                    cout << "Callback lambda creating new CommandControlHandler\n";
+                    return std::move(make_unique<CommandControlHandler>());
+                }
+            ))
+        );
         ui.ParseArguments(argc, argv);
         ui.PrintAndListenForQuit();
     } catch (libsocket::socket_exception ex)
