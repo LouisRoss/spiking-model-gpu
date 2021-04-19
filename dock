@@ -4,6 +4,7 @@ docker container run \
 --gpus all \
 -it \
 --rm \
+-p 0.0.0.0:8000:8000 \
 --name=spiking-model-gpu \
 -v "$(pwd)":/home/spiking-model-gpu \
 louisross/spiking-model-gpu:1.0 \

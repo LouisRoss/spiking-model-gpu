@@ -10,6 +10,7 @@
 #include <cuda_runtime_api.h>
 
 #include "NeuronRecord.h"
+#include "Recorder.h"
 #include "ModelRunner.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
@@ -52,6 +53,10 @@ int main(int argc, char* argv[])
 
     GpuModelCarrier carrier;
     GpuModelHelper<NeuronRecord> helper(carrier, configuration);
+
+    // TODO - control this from external control panel.
+    embeddedpenguins::core::neuron::model::Recorder<NeuronRecord>::Enable(false);
+
     if (!modelRunner.Run(carrier, helper))
     {
         cout << "Cannot run model, stopping\n";
@@ -68,11 +73,11 @@ int main(int argc, char* argv[])
             modelRunner, 
             helper, 
             std::move(make_unique<QueryResponseListenSocket>(
-                "localhost", 
+                "0.0.0.0", 
                 "8000",
                 [](){
                     cout << "Callback lambda creating new CommandControlHandler\n";
-                    return std::move(make_unique<CommandControlHandler>());
+                    return std::move(make_unique<CommandControlHandler<NeuronRecord>>());
                 }
             ))
         );
