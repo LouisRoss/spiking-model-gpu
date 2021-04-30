@@ -42,6 +42,7 @@ namespace embeddedpenguins::gpu::neuron::model
         //void RecordFile(const string& recordfile) { context_.RecordFile = recordfile; }
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
+        ModelEngineContext<RECORDTYPE>& Context() { return context_; }
 
     public:
         ModelEngine() = delete;

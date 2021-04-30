@@ -78,5 +78,20 @@ namespace embeddedpenguins::gpu::neuron::model
             RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
         }
+
+        json Render()
+        {
+            return json {
+                {"run", Run ? true : false},
+                {"loglevel", LoggingLevel},
+                {"logfile", LogFile.c_str()},
+                {"recordfile", RecordFile.c_str()},
+                {"engineperiod", EnginePeriod.count()},
+                {"engineinit", EngineInitialized ? true : false},
+                {"enginefail", EngineInitializeFailed ? true : false},
+                {"iterations", Iterations},
+                {"totalwork", TotalWork}
+            };
+        }
     };
 }

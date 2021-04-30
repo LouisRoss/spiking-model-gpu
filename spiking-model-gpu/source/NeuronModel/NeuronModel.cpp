@@ -12,6 +12,7 @@
 #include "NeuronRecord.h"
 #include "Recorder.h"
 #include "ModelRunner.h"
+#include "ModelEngineContext.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
 #include "GpuModelUi.h"
@@ -75,9 +76,9 @@ int main(int argc, char* argv[])
             std::move(make_unique<QueryResponseListenSocket>(
                 "0.0.0.0", 
                 "8000",
-                [](){
+                [&modelRunner](){
                     cout << "Callback lambda creating new CommandControlHandler\n";
-                    return std::move(make_unique<CommandControlHandler<NeuronRecord>>());
+                    return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context()));
                 }
             ))
         );

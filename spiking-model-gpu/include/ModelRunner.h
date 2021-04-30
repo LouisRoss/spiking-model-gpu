@@ -62,6 +62,7 @@ namespace embeddedpenguins::gpu::neuron::model
         const json& Settings() const { return configuration_.Settings(); }
         const microseconds EnginePeriod() const { return modelEngine_->EnginePeriod(); }
         microseconds& EnginePeriod() { return modelEngine_->EnginePeriod(); }
+        ModelEngineContext<RECORDTYPE>& Context() const { return modelEngine_->Context(); }
 
     public:
         ModelRunner(int argc, char* argv[])
