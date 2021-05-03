@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <memory>
 #include <atomic>
@@ -18,6 +19,7 @@
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    using std::cout;
     using std::string;
     using std::atomic;
     using std::mutex;
@@ -92,6 +94,31 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"iterations", Iterations},
                 {"totalwork", TotalWork}
             };
+        }
+
+        bool SetValue(const json& controlValues)
+        {
+            bool success {true};
+            try
+            {
+                if (controlValues.contains("loglevel"))
+                {
+                    LoggingLevel = (LogLevel)controlValues["loglevel"].get<int>();
+                    cout << "Changed logging level to " << (int)LoggingLevel << "\n";
+                }
+                if (controlValues.contains("engineperiod"))
+                {
+                    EnginePeriod = microseconds(controlValues["engineperiod"].get<int>());
+                    cout << "Changed engine period to " << EnginePeriod.count() << "\n";
+                }
+                // Do more as they come up...
+            }
+            catch(const std::exception& e)
+            {
+                success = false;
+            }
+            
+            return success;
         }
     };
 }
