@@ -5,10 +5,12 @@
 #include "ModelRunner.h"
 #include "GpuModelHelper.h"
 #include "NeuronRecord.h"
+#include "ICommandControlAcceptor.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
     using embeddedpenguins::core::neuron::model::ModelUi;
+    using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
 
     class GpuModelUi : public ModelUi<ModelRunner<NeuronRecord>, GpuModelHelper<NeuronRecord>>
     {
@@ -16,8 +18,8 @@ namespace embeddedpenguins::gpu::neuron::model
         string legend_ {};
 
     public:
-        GpuModelUi(ModelRunner<NeuronRecord>& modelRunner, GpuModelHelper<NeuronRecord>& helper) :
-            ModelUi(modelRunner, helper)
+        GpuModelUi(ModelRunner<NeuronRecord>& modelRunner, GpuModelHelper<NeuronRecord>& helper, unique_ptr<ICommandControlAcceptor> commandControl) :
+            ModelUi(modelRunner, helper, std::move(commandControl))
         {
             modelSize_ = helper.Carrier().ModelSize();
         }

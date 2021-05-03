@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <memory>
 #include <atomic>
@@ -18,6 +19,7 @@
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    using std::cout;
     using std::string;
     using std::atomic;
     using std::mutex;
@@ -77,6 +79,46 @@ namespace embeddedpenguins::gpu::neuron::model
 
             RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
+        }
+
+        json Render()
+        {
+            return json {
+                {"run", Run ? true : false},
+                {"loglevel", LoggingLevel},
+                {"logfile", LogFile.c_str()},
+                {"recordfile", RecordFile.c_str()},
+                {"engineperiod", EnginePeriod.count()},
+                {"engineinit", EngineInitialized ? true : false},
+                {"enginefail", EngineInitializeFailed ? true : false},
+                {"iterations", Iterations},
+                {"totalwork", TotalWork}
+            };
+        }
+
+        bool SetValue(const json& controlValues)
+        {
+            bool success {true};
+            try
+            {
+                if (controlValues.contains("loglevel"))
+                {
+                    LoggingLevel = (LogLevel)controlValues["loglevel"].get<int>();
+                    cout << "Changed logging level to " << (int)LoggingLevel << "\n";
+                }
+                if (controlValues.contains("engineperiod"))
+                {
+                    EnginePeriod = microseconds(controlValues["engineperiod"].get<int>());
+                    cout << "Changed engine period to " << EnginePeriod.count() << "\n";
+                }
+                // Do more as they come up...
+            }
+            catch(const std::exception& e)
+            {
+                success = false;
+            }
+            
+            return success;
         }
     };
 }

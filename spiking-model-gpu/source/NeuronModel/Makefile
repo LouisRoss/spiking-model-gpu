@@ -280,6 +280,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
 INCLUDES  := -I../../include -I../../../include -I/usr/local/cuda/include
+LIBSOCKETINCLUDE=-I../../../include/libsocket
 LIBRARIES :=
 
 ODIR=obj
@@ -316,8 +317,13 @@ endif
 CC=g++
 IDIR=../../include
 ILDIR=../../../include
+CCDIR=../libsocket/C++
+CDIR=../libsocket/C
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h WorkerInputStreamer.h WorkerOutputStreamer.h WorkerThread.h
+_LIBSOCKETOBJS = libinetsocket.o dgramclient.o dgramoverstream.o exception.o framing.o inetbase.o inetclientdgram.o inetclientstream.o inetdgram.o inetserverdgram.o inetserverstream.o select.o socket.o streamclient.o
+LIBSOCKETOBJS = $(patsubst %,$(ODIR)/%,$(_LIBSOCKETOBJS))
+
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h IQueryHandler.h CommandControlHandler.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h WorkerInputStreamer.h WorkerOutputStreamer.h WorkerThread.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
@@ -356,7 +362,16 @@ $(ODIR)/NeuronModel.o: NeuronModel.cpp $(DEPS) $(INITIALIZERDEPS) $(SENSORINPUTD
 	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(DEBUGFLAG) $(INCLUDES) $(ALL_CCFLAGS) $(LOG) $(GENCODE_FLAGS) -o $@ -c $<
 
-NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o
+$(ODIR)/%.o: $(CCDIR)/%.cpp
+	mkdir -p $(ODIR)
+	$(EXEC) $(NVCC) $(DEBUGFLAG) $(LIBSOCKETINCLUDE) $(ALL_CCFLAGS) -DMIXED -c -o $@ $<
+
+$(ODIR)/libinetsocket.o: $(CDIR)/inet/libinetsocket.c
+	mkdir -p $(ODIR)
+	$(EXEC) $(NVCC) $(DEBUGFLAG) $(LIBSOCKETINCLUDE) $(ALL_CCFLAGS) -DMIXED -c -o $@ $<
+
+
+NeuronModel: $(ODIR)/NeuronModelGpu.o $(ODIR)/NeuronModel.o $(LIBSOCKETOBJS)
 	$(EXEC) $(NVCC) $(DEBUGFLAG) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)

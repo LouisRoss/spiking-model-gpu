@@ -17,7 +17,7 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py 
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h ModelUi.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h ModelUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
@@ -113,6 +113,21 @@ $(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelIniti
 
 $(COREDIR)/include/ModelUi.h: spiking-model-gpu/include/ModelUi.h
 	cp spiking-model-gpu/include/ModelUi.h $(COREDIR)/include/
+
+$(COREDIR)/include/ICommandControlAcceptor.h: spiking-model-gpu/include/ICommandControlAcceptor.h
+	cp spiking-model-gpu/include/ICommandControlAcceptor.h $(COREDIR)/include/
+
+$(COREDIR)/include/QueryResponseSocket.h: spiking-model-gpu/include/QueryResponseSocket.h
+	cp spiking-model-gpu/include/QueryResponseSocket.h $(COREDIR)/include/
+
+$(COREDIR)/include/QueryResponseListenSocket.h: spiking-model-gpu/include/QueryResponseListenSocket.h
+	cp spiking-model-gpu/include/QueryResponseListenSocket.h $(COREDIR)/include/
+
+$(COREDIR)/include/IQueryHandler.h: spiking-model-gpu/include/IQueryHandler.h
+	cp spiking-model-gpu/include/IQueryHandler.h $(COREDIR)/include/
+
+$(COREDIR)/include/CommandControlHandler.h: spiking-model-gpu/include/CommandControlHandler.h
+	cp spiking-model-gpu/include/CommandControlHandler.h $(COREDIR)/include/
 
 $(COREDIR)/include/NeuronRecordCommon.h: spiking-model-gpu/include/NeuronRecordCommon.h
 	cp spiking-model-gpu/include/NeuronRecordCommon.h $(COREDIR)/include/

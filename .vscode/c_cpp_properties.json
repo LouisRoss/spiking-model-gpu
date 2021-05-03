@@ -3,7 +3,8 @@
         {
             "name": "C/C++: g++ build active file",
             "includePath": [
-                "/usr/include/c++/9",
+                "/usr/include/linux",
+                "/usr/include/c++/9/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/spiking-model-gpu/source",
                 "${workspaceFolder}/spiking-model-gpu/include",
