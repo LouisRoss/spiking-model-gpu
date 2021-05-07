@@ -18,10 +18,10 @@ namespace embeddedpenguins::gpu::neuron::model
         string legend_ {};
 
     public:
-        GpuModelUi(ModelRunner<NeuronRecord>& modelRunner, GpuModelHelper<NeuronRecord>& helper, unique_ptr<ICommandControlAcceptor> commandControl) :
-            ModelUi(modelRunner, helper, std::move(commandControl))
+        GpuModelUi(ModelRunner<NeuronRecord>& modelRunner, unique_ptr<ICommandControlAcceptor> commandControl) :
+            ModelUi(modelRunner, std::move(commandControl))
         {
-            modelSize_ = helper.Carrier().ModelSize();
+            modelSize_ = helper_.Carrier().ModelSize();
         }
 
         virtual char EmitToken(unsigned long neuronIndex) override

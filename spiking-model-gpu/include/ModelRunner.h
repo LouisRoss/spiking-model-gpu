@@ -51,6 +51,8 @@ namespace embeddedpenguins::gpu::neuron::model
         string controlFile_ {};
 
         ConfigurationRepository configuration_ {};
+        GpuModelCarrier carrier_ {};
+        GpuModelHelper<RECORDTYPE> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
 
     public:
@@ -63,9 +65,11 @@ namespace embeddedpenguins::gpu::neuron::model
         const microseconds EnginePeriod() const { return modelEngine_->EnginePeriod(); }
         microseconds& EnginePeriod() { return modelEngine_->EnginePeriod(); }
         ModelEngineContext<RECORDTYPE>& Context() const { return modelEngine_->Context(); }
+        GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
 
     public:
-        ModelRunner(int argc, char* argv[])
+        ModelRunner(int argc, char* argv[]) :
+            helper_(carrier_, configuration_)
         {
             ParseArgs(argc, argv);
 
@@ -77,12 +81,12 @@ namespace embeddedpenguins::gpu::neuron::model
         // Ensure the model is created and initialized, then start
         // it running asynchronously.
         //
-        bool Run(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
+        bool Run()
         {
             if (!valid_)
                 return false;
 
-            return RunModelEngine(carrier, helper);
+            return RunModelEngine();
         }
 
         //
@@ -141,13 +145,13 @@ namespace embeddedpenguins::gpu::neuron::model
             valid_ = true;
         }
 
-        bool RunModelEngine(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
+        bool RunModelEngine()
         {
             // Create and run the model engine.
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
-                carrier, 
+                carrier_, 
                 configuration_,
-                helper);
+                helper_);
 
             return modelEngine_->Run();
         }
