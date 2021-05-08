@@ -44,10 +44,31 @@ int main(int argc, char* argv[])
         return -1;
 	}
 
-    ModelRunner<NeuronRecord> modelRunner(argc, argv);
-    const auto& configuration = modelRunner.getConfigurationRepository();
+    ModelRunner<NeuronRecord> modelRunner;
+    //const auto& configuration = modelRunner.getConfigurationRepository();
 
     embeddedpenguins::core::neuron::model::Recorder<NeuronRecord>::Enable(false);
+
+    modelRunner.AddCommandControlAcceptor(
+        std::move(make_unique<GpuModelUi>(modelRunner))
+    );
+
+    modelRunner.AddCommandControlAcceptor(
+        std::move(make_unique<QueryResponseListenSocket>(
+            "0.0.0.0", 
+            "8000",
+            [&modelRunner](){
+                cout << "Callback lambda creating new CommandControlHandler\n";
+                return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context()));
+            }
+        ))
+    );
+
+    if (!modelRunner.Initialize(argc, argv))
+    {
+        cout << "Cannot initialize model, stopping\n";
+        return 1;
+    }
 
     if (!modelRunner.Run())
     {
@@ -55,8 +76,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    modelRunner.RunCommandControl();
+
     try
     {
+        /*
         GpuModelUi ui(
             modelRunner, 
             std::move(make_unique<QueryResponseListenSocket>(
@@ -70,6 +94,14 @@ int main(int argc, char* argv[])
         );
         ui.ParseArguments(argc, argv);
         ui.PrintAndListenForQuit();
+        */
+        /*
+        GpuModelUi ui(modelRunner);
+        ui.Initialize(argc, argv);
+        auto quit { false };
+        while (!quit)
+            quit = ui.AcceptAndExecute();
+        */
     } catch (libsocket::socket_exception ex)
     {
         cout << "Caught exception " << ex.mesg << "\n";

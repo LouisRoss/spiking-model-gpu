@@ -16,6 +16,7 @@
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
 #include "ModelEngine.h"
+#include "ICommandControlAcceptor.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -32,6 +33,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
+    using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
 
     //
     // Wrap the most common startup and teardown sequences to run a model
@@ -54,6 +56,7 @@ namespace embeddedpenguins::gpu::neuron::model
         GpuModelCarrier carrier_ {};
         GpuModelHelper<RECORDTYPE> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
+        vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
 
     public:
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
@@ -68,13 +71,31 @@ namespace embeddedpenguins::gpu::neuron::model
         GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
 
     public:
-        ModelRunner(int argc, char* argv[]) :
+        ModelRunner() :
             helper_(carrier_, configuration_)
         {
+        }
+
+        void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor)
+        {
+            cout << "Adding command/control acceptor to runner\n";
+            commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
+        }
+
+        bool Initialize(int argc, char* argv[])
+        {
+            cout << "Runner parsing argument\n";
             ParseArgs(argc, argv);
 
             if (valid_)
+            {
+                cout << "Runner initializing configuration\n";
                 valid_ = configuration_.InitializeConfiguration(controlFile_);
+            }
+
+            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), [&argc, &argv](auto& acceptor){ cout << "Runner initializing C/C acceptor\n"; acceptor->Initialize(argc, argv); });
+
+            return valid_;
         }
 
         //
@@ -87,6 +108,15 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
 
             return RunModelEngine();
+        }
+
+        void RunCommandControl()
+        {
+            auto quit { false };
+            while (!quit)
+            {
+                for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), [&quit](auto& acceptor){ quit |= acceptor->AcceptAndExecute(); });
+            }
         }
 
         //
@@ -154,6 +184,15 @@ namespace embeddedpenguins::gpu::neuron::model
                 helper_);
 
             return modelEngine_->Run();
+        }
+
+        void RunCommandControlAcceptors()
+        {
+            auto quit { false };
+            while (!quit)
+            {
+                for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), [&quit](auto& acceptor){ quit |= acceptor->AcceptAndExecute(); });
+            }
         }
     };
 }

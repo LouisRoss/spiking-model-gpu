@@ -111,12 +111,14 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             if (!context_.Helper.AllocateModel())
             {
+                cout << "ModelEngineThread.Initialize failed at context_.Helper.AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
 
             if (!InitializeModel())
             {
+                cout << "ModelEngineThread.Initialize failed at InitializeModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
@@ -128,12 +130,14 @@ namespace embeddedpenguins::gpu::neuron::model
 
             if (!inputStreamer_.Valid())
             {
+                cout << "ModelEngineThread.Initialize failed at inputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
 
             if (!outputStreamer_.Valid())
             {
+                cout << "ModelEngineThread.Initialize failed at outputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
