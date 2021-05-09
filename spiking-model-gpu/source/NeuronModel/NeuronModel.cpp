@@ -12,7 +12,6 @@
 #include "GpuModelHelper.h"
 #include "GpuModelUi.h"
 #include "ICommandControlAcceptor.h"
-#include "CommandControlListenSocket.h"
 #include "QueryResponseListenSocket.h"
 #include "CommandControlHandler.h"
 
@@ -23,7 +22,6 @@ using std::make_unique;
 using namespace embeddedpenguins::gpu::neuron::model;
 using embeddedpenguins::core::neuron::model::KeyListener;
 using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
-using embeddedpenguins::core::neuron::model::CommandControlListenSocket;
 using embeddedpenguins::core::neuron::model::QueryResponseListenSocket;
 using embeddedpenguins::core::neuron::model::CommandControlHandler;
 using embeddedpenguins::gpu::neuron::model::GpuModelCarrier;
@@ -45,7 +43,6 @@ int main(int argc, char* argv[])
 	}
 
     ModelRunner<NeuronRecord> modelRunner;
-    //const auto& configuration = modelRunner.getConfigurationRepository();
 
     embeddedpenguins::core::neuron::model::Recorder<NeuronRecord>::Enable(false);
 
@@ -64,44 +61,21 @@ int main(int argc, char* argv[])
         ))
     );
 
-    if (!modelRunner.Initialize(argc, argv))
-    {
-        cout << "Cannot initialize model, stopping\n";
-        return 1;
-    }
-
-    if (!modelRunner.Run())
-    {
-        cout << "Cannot run model, stopping\n";
-        return 1;
-    }
-
-    modelRunner.RunCommandControl();
-
     try
     {
-        /*
-        GpuModelUi ui(
-            modelRunner, 
-            std::move(make_unique<QueryResponseListenSocket>(
-                "0.0.0.0", 
-                "8000",
-                [&modelRunner](){
-                    cout << "Callback lambda creating new CommandControlHandler\n";
-                    return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context()));
-                }
-            ))
-        );
-        ui.ParseArguments(argc, argv);
-        ui.PrintAndListenForQuit();
-        */
-        /*
-        GpuModelUi ui(modelRunner);
-        ui.Initialize(argc, argv);
-        auto quit { false };
-        while (!quit)
-            quit = ui.AcceptAndExecute();
-        */
+        if (!modelRunner.Initialize(argc, argv))
+        {
+            cout << "Cannot initialize model, stopping\n";
+            return 1;
+        }
+
+        if (!modelRunner.Run())
+        {
+            cout << "Cannot run model, stopping\n";
+            return 1;
+        }
+
+        modelRunner.RunCommandControl();
     } catch (libsocket::socket_exception ex)
     {
         cout << "Caught exception " << ex.mesg << "\n";

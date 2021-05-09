@@ -50,6 +50,7 @@ namespace embeddedpenguins::gpu::neuron::model
     class ModelRunner
     {
         bool valid_ { false };
+        string reason_ {};
         string controlFile_ {};
 
         ConfigurationRepository configuration_ {};
@@ -59,6 +60,7 @@ namespace embeddedpenguins::gpu::neuron::model
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
 
     public:
+        const string& Reason() const { return reason_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
         const ConfigurationRepository& getConfigurationRepository() const { return configuration_; }
         const json& Control() const { return configuration_.Control(); }
@@ -78,7 +80,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor)
         {
-            cout << "Adding command/control acceptor to runner\n";
+            cout << "Adding command and control acceptor " << commandControlAcceptor->Description() << " to runner\n";
             commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
         }
 
@@ -87,13 +89,28 @@ namespace embeddedpenguins::gpu::neuron::model
             cout << "Runner parsing argument\n";
             ParseArgs(argc, argv);
 
-            if (valid_)
+            if (!valid_)
+                return false;
+
+            cout << "Runner initializing configuration\n";
+            valid_ = configuration_.InitializeConfiguration(controlFile_);
+
+            if (!valid_)
             {
-                cout << "Runner initializing configuration\n";
-                valid_ = configuration_.InitializeConfiguration(controlFile_);
+                reason_ = "Unable to initialize configuration from control file " + controlFile_;
+                return false;
             }
 
-            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), [&argc, &argv](auto& acceptor){ cout << "Runner initializing C/C acceptor\n"; acceptor->Initialize(argc, argv); });
+            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
+                [&argc, &argv, this](auto& acceptor)
+                { 
+                    cout << "Runner initializing command and control acceptor" << acceptor->Description() << "\n"; 
+                    if (!acceptor->Initialize(argc, argv))
+                    {
+                        this->reason_ = "Failed initializing command and control acceptor " + acceptor->Description();
+                        this->valid_ = false;
+                    }
+                });
 
             return valid_;
         }
@@ -105,7 +122,13 @@ namespace embeddedpenguins::gpu::neuron::model
         bool Run()
         {
             if (!valid_)
+            {
+                cout << "Failed to run model engine because runner is in an invalid state\n";
                 return false;
+            }
+
+            if (modelEngine_)
+                WaitForQuit();
 
             return RunModelEngine();
         }
@@ -126,7 +149,8 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         void Quit()
         {
-            modelEngine_->Quit();
+            if (modelEngine_)
+                modelEngine_->Quit();
         }
 
         //
@@ -135,7 +159,11 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         void WaitForQuit()
         {
-            modelEngine_->WaitForQuit();
+            if (modelEngine_)
+            {
+                modelEngine_->WaitForQuit();
+                delete(modelEngine_.release());
+            }
         }
 
     private:
@@ -151,6 +179,8 @@ namespace embeddedpenguins::gpu::neuron::model
             if (argc < 2)
             {
                 cout << "Usage: " << argv[0] << usage;
+                reason_ = "Cannot start with less than 1 parameter";
+                valid_ = false;
                 return;
             }
 
@@ -164,6 +194,8 @@ namespace embeddedpenguins::gpu::neuron::model
             if (controlFile_.empty())
             {
                 cout << "Usage: " << argv[0] << usage;
+                reason_ = "Control file not specified";
+                valid_ = false;
                 return;
             }
 
@@ -184,15 +216,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 helper_);
 
             return modelEngine_->Run();
-        }
-
-        void RunCommandControlAcceptors()
-        {
-            auto quit { false };
-            while (!quit)
-            {
-                for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), [&quit](auto& acceptor){ quit |= acceptor->AcceptAndExecute(); });
-            }
         }
     };
 }
