@@ -96,6 +96,17 @@ namespace embeddedpenguins::gpu::neuron::model
             };
         }
 
+        json RenderDynamic()
+        {
+            return json {
+                {"run", Run ? true : false},
+                {"engineinit", EngineInitialized ? true : false},
+                {"enginefail", EngineInitializeFailed ? true : false},
+                {"iterations", Iterations},
+                {"totalwork", TotalWork}
+            };
+        }
+
         bool SetValue(const json& controlValues)
         {
             bool success {true};
