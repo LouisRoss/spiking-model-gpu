@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <exception>
+#include <functional>
 
 #include <cuda_runtime_api.h>
 
@@ -18,6 +19,7 @@
 using std::cout;
 using std::unique_ptr;
 using std::make_unique;
+using std::function;
 
 using namespace embeddedpenguins::gpu::neuron::model;
 using embeddedpenguins::core::neuron::model::KeyListener;
@@ -54,9 +56,9 @@ int main(int argc, char* argv[])
         std::move(make_unique<QueryResponseListenSocket>(
             "0.0.0.0", 
             "8000",
-            [&modelRunner](){
+            [&modelRunner](function<void(const string&)> commandHandler){
                 cout << "Callback lambda creating new CommandControlHandler\n";
-                return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context()));
+                return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context(), commandHandler));
             }
         ))
     );
@@ -65,13 +67,13 @@ int main(int argc, char* argv[])
     {
         if (!modelRunner.Initialize(argc, argv))
         {
-            cout << "Cannot initialize model, stopping\n";
+            cout << "Cannot initialize model: " << modelRunner.Reason() << "\nstopping\n";
             return 1;
         }
 
         if (!modelRunner.Run())
         {
-            cout << "Cannot run model, stopping\n";
+            cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
             return 1;
         }
 

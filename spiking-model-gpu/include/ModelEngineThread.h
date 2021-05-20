@@ -33,6 +33,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using time_point = std::chrono::high_resolution_clock::time_point;
     using std::chrono::microseconds;
     using std::chrono::duration_cast;
+    using std::chrono::duration;
     using std::cout;
     using std::cerr;
 
@@ -109,12 +110,14 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
+            /*
             if (!context_.Helper.AllocateModel())
             {
                 cout << "ModelEngineThread.Initialize failed at context_.Helper.AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
+            */
 
             if (!InitializeModel())
             {
@@ -155,6 +158,7 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "ModelEngine starting main loop\n";
             context_.Logger.Logit();
 #endif
+            long long int engineElapsed;
 
             WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE> inputStreamThread(inputStreamer_);
             WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE> outputStreamThread(outputStreamer_);
@@ -172,9 +176,11 @@ namespace embeddedpenguins::gpu::neuron::model
                     context_.Logger.Logit();
 
                 }
+
+                engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
             }
             while (!quit);
-            auto engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
+
             auto partitionElapsed = context_.PartitionTime.count();
 
 #ifndef NOLOG
@@ -194,12 +200,12 @@ namespace embeddedpenguins::gpu::neuron::model
         bool WaitForWorkOrQuit()
         {
             auto quit { true };
-            nextScheduledTick_ += context_.EnginePeriod;
+
             {
                 unique_lock<mutex> lock(context_.Mutex);
-                context_.Cv.wait_until(lock, nextScheduledTick_, [this](){ return context_.Quit; });
+                context_.Cv.wait_until(lock, nextScheduledTick_, [this](){ return !context_.Run; });
 
-                quit = context_.Quit;
+                quit = !context_.Run;
                 nextScheduledTick_ += context_.EnginePeriod;
             }
 

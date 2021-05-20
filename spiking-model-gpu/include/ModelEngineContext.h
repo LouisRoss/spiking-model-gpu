@@ -69,18 +69,36 @@ namespace embeddedpenguins::gpu::neuron::model
             Record(Iterations),
             EnginePeriod(1000)
         {
-            // Create and run the model engine.
-            const json& modelJson = Configuration.Configuration()["Model"];
-            if (modelJson.is_null()) return;
+        }
 
-            const json& modelTicksJson = modelJson["ModelTicks"];
-            if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
-                EnginePeriod = microseconds(modelTicksJson.get<int>());
+        //
+        // Initialize configured context properties after creation.
+        // NOTE: assumes the configuration has been loaded first.
+        //
+        bool Initialize()
+        {
+            // Create and run the model engine.
+            if (!Configuration.Configuration().contains("Model"))
+                return false;
+
+            const json& modelJson = Configuration.Configuration()["Model"];
+            if (!modelJson.is_object())
+                return false;
+
+            if (modelJson.contains("ModelTicks"))
+            {
+                const json& modelTicksJson = modelJson["ModelTicks"];
+                if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
+                    EnginePeriod = microseconds(modelTicksJson.get<int>());
+            }
 
             RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
         }
 
+        //
+        // Render all the context properties as a single JSON object.
+        //
         json Render()
         {
             return json {
@@ -96,6 +114,9 @@ namespace embeddedpenguins::gpu::neuron::model
             };
         }
 
+        //
+        // Render all the dynamic context properties as a single JSON object.
+        //
         json RenderDynamic()
         {
             return json {
@@ -107,6 +128,9 @@ namespace embeddedpenguins::gpu::neuron::model
             };
         }
 
+        //
+        // Set one or more context properties from the subset passed as a JSON object.
+        //
         bool SetValue(const json& controlValues)
         {
             bool success {true};

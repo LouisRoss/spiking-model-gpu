@@ -75,10 +75,13 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void Quit()
         {
+            context_.Run = false;
+            /*
             {
                 lock_guard<mutex> lock(context_.Mutex);
                 context_.Quit = true;
             }
+            */
             context_.Cv.notify_one();
         }
 
