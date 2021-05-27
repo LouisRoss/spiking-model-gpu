@@ -44,7 +44,7 @@ namespace embeddedpenguins::gpu::neuron::model
     struct ModelEngineContext
     {
         atomic<bool> Run { false };
-        bool Quit { false };
+        atomic<bool> Pause { false };
         mutex Mutex;
         condition_variable Cv;
 
@@ -94,6 +94,8 @@ namespace embeddedpenguins::gpu::neuron::model
 
             RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
+
+            return true;
         }
 
         //

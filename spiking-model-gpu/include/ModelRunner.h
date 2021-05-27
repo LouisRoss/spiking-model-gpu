@@ -17,6 +17,8 @@
 #include "GpuModelHelper.h"
 #include "ModelEngine.h"
 #include "ICommandControlAcceptor.h"
+#include "IQueryHandler.h"
+#include "CommandControlHandler.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -34,6 +36,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
     using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
+    using embeddedpenguins::core::neuron::model::IQueryHandler;
+    using embeddedpenguins::core::neuron::model::CommandControlHandler;
 
     //
     // Wrap the most common startup and teardown sequences to run a model
@@ -58,6 +62,7 @@ namespace embeddedpenguins::gpu::neuron::model
         GpuModelHelper<RECORDTYPE> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
+        unique_ptr<IQueryHandler> queryHandler_ {};
 
     public:
         const string& Reason() const { return reason_; }
@@ -73,9 +78,25 @@ namespace embeddedpenguins::gpu::neuron::model
         GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
 
     public:
+        //
+        // Usage should follow this sequence:
+        // 1. Construct a new instance.
+        // 2. Add any required command & control acceptors with AddCommandControlAcceptor().
+        // 3. Call Initialize() (one time only) with the command line arguments.
+        // 4. Give the the C&C acceptors run time on the main thread by calling RunCommandControl().
+        //    This will return only after the model terminates for the final time.
+        // Call sequences of the following to control as needed (typically from within a C&C acceptor)
+        //    * RunWithNewModel()
+        //    * RunWithExistingModel()
+        //    * Pause()
+        //    * Continue()
+        //    * Quit()
+        //    * WaitForQuit()
+        //
         ModelRunner() :
             helper_(carrier_, configuration_)
         {
+            //queryHandler_ = std::move(make_unique<CommandControlHandler>());
         }
 
         //
@@ -89,10 +110,9 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         //
-        // Usage should follow this sequence:
-        // 1. Construct a new instance.
-        // 2. Add any required command & control acceptors.
-        // 3. Call Initialize with the command-line arguments.
+        // After all C&C acceptors are added, initialize with the command line argments.
+        // If a control file was part of the command line, the model will be automatically
+        // run with that control file.
         //
         bool Initialize(int argc, char* argv[])
         {
@@ -102,12 +122,112 @@ namespace embeddedpenguins::gpu::neuron::model
             if (!valid_)
                 return false;
 
-            if (!controlFile_.empty())
-                InitializeConfiguration();
+            PrepareControlFile();
+
+            if (!valid_)
+                return false;
+
+            InitializeConfiguration();
 
             return valid_;
         }
 
+        //
+        // All C&C acceptors are given some run time on the main thread by calling here.
+        // This will not return until one C&C acceptor sees its quit command.
+        //
+        void RunCommandControl()
+        {
+            auto quit { false };
+            while (!quit)
+            {
+                for_each(
+                    commandControlAcceptors_.begin(), 
+                    commandControlAcceptors_.end(), 
+                    [this, &quit](auto& acceptor)
+                    {
+                        quit |= acceptor->AcceptAndExecute(
+                        [this](const string& command)
+                        {
+                            this->HandleCommand(command);
+                        });
+                    });
+            }
+
+            // Make sure we are not paused before stopping.
+            Continue();
+        }
+
+        bool RunWithNewModel(const string& controlFile)
+        {
+            controlFile_ = controlFile;
+
+            return RunWithExistingModel();
+        }
+
+
+        bool RunWithExistingModel()
+        {
+            PrepareControlFile();
+
+            if (!valid_)
+                return false;
+
+            InitializeConfiguration();
+
+            if (!valid_)
+                return false;
+
+            return Run();
+        }
+
+        bool Pause()
+        {
+            if (modelEngine_)
+            {
+                modelEngine_->Pause();
+                return true;
+            }
+
+            return false;
+        }
+
+        bool Continue()
+        {
+            if (modelEngine_)
+            {
+                modelEngine_->Continue();
+                return true;
+            }
+
+            return false;
+        }
+
+        //
+        // Start an async process to stop the model engine
+        // and return immediately.  To guarantee it has stopped,
+        // call WaitForQuit().
+        //
+        void Quit()
+        {
+            if (modelEngine_)
+                modelEngine_->Quit();
+        }
+
+        //
+        // Call Quit() and wait until the model engine stops.
+        // It is legal to call this after Quit().
+        //
+        void WaitForQuit()
+        {
+            if (modelEngine_)
+            {
+                modelEngine_->WaitForQuit();
+                delete(modelEngine_.release());
+            }
+        }
+
+    private:
         void InitializeConfiguration()
         {
             cout << "Runner initializing configuration\n";
@@ -152,8 +272,11 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
-            if (modelEngine_)
-                WaitForQuit();
+            WaitForQuit();
+
+            if (!modelEngine_)
+                if (!InitializeModelEngine())
+                    return false;
 
             return RunModelEngine();
         }
@@ -163,50 +286,6 @@ namespace embeddedpenguins::gpu::neuron::model
             cout << "Handling command '" << command << "'\n";
         }
 
-        void RunCommandControl()
-        {
-            auto quit { false };
-            while (!quit)
-            {
-                for_each(
-                    commandControlAcceptors_.begin(), 
-                    commandControlAcceptors_.end(), 
-                    [this, &quit](auto& acceptor)
-                    {
-                        quit |= acceptor->AcceptAndExecute(
-                        [this](const string& command)
-                        {
-                            this->HandleCommand(command);
-                        });
-                    });
-            }
-        }
-
-        //
-        // Start an async process to stop the model engine
-        // and return immediately.  To guarantee it has stopped,
-        // call WaitForQuit().
-        //
-        void Quit()
-        {
-            if (modelEngine_)
-                modelEngine_->Quit();
-        }
-
-        //
-        // Call Quit() and wait until the model engine stops.
-        // It is legal to call this after Quit().
-        //
-        void WaitForQuit()
-        {
-            if (modelEngine_)
-            {
-                modelEngine_->WaitForQuit();
-                delete(modelEngine_.release());
-            }
-        }
-
-    private:
         void ParseArgs(int argc, char *argv[])
         {
             static string usage {
@@ -223,24 +302,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 controlFile_ = arg;
             }
 
-            if (controlFile_.empty())
-            {
-                /*
-                cout << "Usage: " << argv[0] << usage;
-                reason_ = "Control file not specified";
-                valid_ = false;
-                return;
-                */
-               cout << "No control file given, not running any model\n";
-            }
-            else
-            {
-                if (controlFile_.length() < 5 || controlFile_.substr(controlFile_.length()-5, controlFile_.length()) != ".json")
-                    controlFile_ += ".json";
-
-                cout << "Using control file " << controlFile_ << "\n";
-            }
-
             valid_ = true;
 
             for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
@@ -255,14 +316,44 @@ namespace embeddedpenguins::gpu::neuron::model
                 });
         }
 
-        bool RunModelEngine()
+        bool PrepareControlFile()
         {
-            // Create and run the model engine.
+            if (controlFile_.empty())
+            {
+                valid_ = false;
+                cout << "No control file given, not running any model\n";
+            }
+            else
+            {
+                if (controlFile_.length() < 5 || controlFile_.substr(controlFile_.length()-5, controlFile_.length()) != ".json")
+                    controlFile_ += ".json";
+
+                cout << "Using control file " << controlFile_ << "\n";
+            }
+
+            return valid_;
+        }
+
+        bool InitializeModelEngine()
+        {
+            // Ensure no model engine, stop and delete first if needed.
+            WaitForQuit();
+
+            // Create the model engine.
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
                 carrier_, 
                 configuration_,
                 helper_);
 
+            return modelEngine_->Initialize();
+        }
+
+        bool RunModelEngine()
+        {
+            if (!modelEngine_)
+                return false;
+
+            // Run the model engine.
             return modelEngine_->Run();
         }
     };

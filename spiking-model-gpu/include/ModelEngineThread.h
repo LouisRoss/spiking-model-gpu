@@ -77,29 +77,32 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void operator() ()
         {
-            while (!context_.Run) { std::this_thread::yield(); }
-
-            try
+            do
             {
-                if (Initialize())
-                    MainLoop();
-                Cleanup();
-            }
-            catch(const std::exception& e)
-            {
-                cout << "ModelEngine exception while running: " << e.what() << '\n';
-            }
+                while (!context_.Run) { std::this_thread::yield(); }
 
-            Log::Merge(context_.Logger);
-            Recorder<NeuronRecord>::Merge(context_.Record);
-            cout << "Writing log file to " << context_.LogFile << "... " << std::flush;
-            Log::Print(context_.LogFile.c_str());
-            cout << "Done\n";
-            cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
-            Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
-            cout << "Done\n";
+                try
+                {
+                    if (Initialize())
+                        MainLoop();
+                    Cleanup();
+                }
+                catch(const std::exception& e)
+                {
+                    cout << "ModelEngine exception while running: " << e.what() << '\n';
+                }
 
-            context_.Run = false;
+                context_.Run = false;
+
+                Log::Merge(context_.Logger);
+                Recorder<NeuronRecord>::Merge(context_.Record);
+                cout << "Writing log file to " << context_.LogFile << "... " << std::flush;
+                Log::Print(context_.LogFile.c_str());
+                cout << "Done\n";
+                cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
+                Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
+                cout << "Done\n";
+            } while (context_.Run);
         }
 
         unsigned long long int GetIterations()
@@ -166,6 +169,11 @@ namespace embeddedpenguins::gpu::neuron::model
             auto quit {false};
             do
             {
+                auto needResync { false };
+                while (context_.Pause) { needResync = true; std::this_thread::yield(); }
+                if (needResync) nextScheduledTick_ = high_resolution_clock::now();
+
+
                 quit = WaitForWorkOrQuit();
                 if (!quit)
                 {

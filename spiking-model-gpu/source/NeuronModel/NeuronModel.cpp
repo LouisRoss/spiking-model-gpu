@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        if (!modelRunner.Run())
+        if (!modelRunner.RunWithExistingModel())
         {
             cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
             return 1;
