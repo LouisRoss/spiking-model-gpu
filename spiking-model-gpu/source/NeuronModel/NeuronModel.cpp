@@ -53,14 +53,7 @@ int main(int argc, char* argv[])
     );
 
     modelRunner.AddCommandControlAcceptor(
-        std::move(make_unique<QueryResponseListenSocket>(
-            "0.0.0.0", 
-            "8000",
-            [&modelRunner](function<void(const string&)> commandHandler){
-                cout << "Callback lambda creating new CommandControlHandler\n";
-                return std::move(make_unique<CommandControlHandler<NeuronRecord, ModelEngineContext<NeuronRecord>>>(modelRunner.Context(), commandHandler));
-            }
-        ))
+        std::move(make_unique<QueryResponseListenSocket>("0.0.0.0", "8000"))
     );
 
     try

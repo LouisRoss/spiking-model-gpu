@@ -105,6 +105,7 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             return json {
                 {"run", Run ? true : false},
+                {"pause", Pause ? true : false},
                 {"loglevel", LoggingLevel},
                 {"logfile", LogFile.c_str()},
                 {"recordfile", RecordFile.c_str()},
@@ -123,6 +124,7 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             return json {
                 {"run", Run ? true : false},
+                {"pause", Pause ? true : false},
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
                 {"iterations", Iterations},

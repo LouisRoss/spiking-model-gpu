@@ -70,7 +70,8 @@
         "__nullptr": "cpp",
         "__functional_base": "cpp",
         "locale": "cpp",
-        "NeuronModel.cpp": "cuda-cpp"
+        "NeuronModel.cpp": "cuda-cpp",
+        "IModelRunner.h": "cuda-cpp"
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Enabled"

@@ -13,6 +13,7 @@
 #include "ConfigurationRepository.h"
 #include "ModelInitializerProxy.h"
 
+#include "IModelRunner.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
 #include "ModelEngine.h"
@@ -33,6 +34,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::ifstream;
     using nlohmann::json;
 
+    using embeddedpenguins::core::neuron::model::IModelRunner;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
     using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
@@ -51,7 +53,7 @@ namespace embeddedpenguins::gpu::neuron::model
     // the model engine object, and all configuration defined for the model.
     //
     template<class RECORDTYPE>
-    class ModelRunner
+    class ModelRunner : public IModelRunner
     {
         bool valid_ { false };
         string reason_ {};
@@ -65,15 +67,15 @@ namespace embeddedpenguins::gpu::neuron::model
         unique_ptr<IQueryHandler> queryHandler_ {};
 
     public:
-        const string& Reason() const { return reason_; }
+        virtual const string& Reason() const override { return reason_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
-        const ConfigurationRepository& getConfigurationRepository() const { return configuration_; }
-        const json& Control() const { return configuration_.Control(); }
-        const json& Configuration() const { return configuration_.Configuration(); }
-        const json& Monitor() const { return configuration_.Monitor(); }
-        const json& Settings() const { return configuration_.Settings(); }
-        const microseconds EnginePeriod() const { return modelEngine_->EnginePeriod(); }
-        microseconds& EnginePeriod() { return modelEngine_->EnginePeriod(); }
+        virtual const ConfigurationRepository& getConfigurationRepository() const override { return configuration_; }
+        virtual const json& Control() const override { return configuration_.Control(); }
+        virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual const json& Monitor() const override { return configuration_.Monitor(); }
+        virtual const json& Settings() const override { return configuration_.Settings(); }
+        virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
+        virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
         ModelEngineContext<RECORDTYPE>& Context() const { return modelEngine_->Context(); }
         GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
 
@@ -96,14 +98,20 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelRunner() :
             helper_(carrier_, configuration_)
         {
-            //queryHandler_ = std::move(make_unique<CommandControlHandler>());
+            queryHandler_ = std::move(make_unique<CommandControlHandler<RECORDTYPE>>(*this));
+        }
+
+        ModelRunner(unique_ptr<IQueryHandler> queryHandler) :
+            helper_(carrier_, configuration_),
+            queryHandler_(std::move(queryHandler))
+        {
         }
 
         //
         // Multiple command & control acceptors (which must implement ICommandControlAcceptor)
         // may be added to the model runner, and each will be given time to run on the main thread.
         //
-        void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor)
+        virtual void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor) override
         {
             cout << "Adding command and control acceptor " << commandControlAcceptor->Description() << " to runner\n";
             commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
@@ -114,7 +122,7 @@ namespace embeddedpenguins::gpu::neuron::model
         // If a control file was part of the command line, the model will be automatically
         // run with that control file.
         //
-        bool Initialize(int argc, char* argv[])
+        virtual bool Initialize(int argc, char* argv[]) override
         {
             cout << "Runner parsing argument\n";
             ParseArgs(argc, argv);
@@ -136,7 +144,7 @@ namespace embeddedpenguins::gpu::neuron::model
         // All C&C acceptors are given some run time on the main thread by calling here.
         // This will not return until one C&C acceptor sees its quit command.
         //
-        void RunCommandControl()
+        virtual void RunCommandControl() override
         {
             auto quit { false };
             while (!quit)
@@ -146,19 +154,16 @@ namespace embeddedpenguins::gpu::neuron::model
                     commandControlAcceptors_.end(), 
                     [this, &quit](auto& acceptor)
                     {
-                        quit |= acceptor->AcceptAndExecute(
-                        [this](const string& command)
-                        {
-                            this->HandleCommand(command);
-                        });
-                    });
+                        quit |= acceptor->AcceptAndExecute(this->queryHandler_);
+                    }
+                );
             }
 
             // Make sure we are not paused before stopping.
             Continue();
         }
 
-        bool RunWithNewModel(const string& controlFile)
+        virtual bool RunWithNewModel(const string& controlFile) override
         {
             controlFile_ = controlFile;
 
@@ -166,7 +171,7 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
 
-        bool RunWithExistingModel()
+        virtual bool RunWithExistingModel() override
         {
             PrepareControlFile();
 
@@ -181,7 +186,10 @@ namespace embeddedpenguins::gpu::neuron::model
             return Run();
         }
 
-        bool Pause()
+        //
+        // Set the model engine into the paused state.
+        //
+        virtual bool Pause() override
         {
             if (modelEngine_)
             {
@@ -192,7 +200,10 @@ namespace embeddedpenguins::gpu::neuron::model
             return false;
         }
 
-        bool Continue()
+        //
+        // Ensure the model engine is not in the paused state.
+        //
+        virtual bool Continue() override
         {
             if (modelEngine_)
             {
@@ -208,7 +219,7 @@ namespace embeddedpenguins::gpu::neuron::model
         // and return immediately.  To guarantee it has stopped,
         // call WaitForQuit().
         //
-        void Quit()
+        virtual void Quit() override
         {
             if (modelEngine_)
                 modelEngine_->Quit();
@@ -218,13 +229,47 @@ namespace embeddedpenguins::gpu::neuron::model
         // Call Quit() and wait until the model engine stops.
         // It is legal to call this after Quit().
         //
-        void WaitForQuit()
+        virtual void WaitForQuit() override
         {
             if (modelEngine_)
             {
                 modelEngine_->WaitForQuit();
                 delete(modelEngine_.release());
             }
+        }
+
+        //
+        // Render the current model engine status into a single JSON object.
+        //
+        virtual json RenderStatus() override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().Render();
+
+            return json {};
+        }
+
+        //
+        // Render only the dynamic portion of the status into a JSON object.
+        //
+        virtual json RenderDynamicStatus() override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().RenderDynamic();
+
+            return json {};
+        }
+
+        //
+        // Accept a JSON object with a collection of name/value pairs
+        // and set the value to each named parameter.
+        //
+        virtual bool SetValue(const json& controlValues) override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().SetValue(controlValues);
+
+            return false;
         }
 
     private:
@@ -279,11 +324,6 @@ namespace embeddedpenguins::gpu::neuron::model
                     return false;
 
             return RunModelEngine();
-        }
-
-        void HandleCommand(const string& command)
-        {
-            cout << "Handling command '" << command << "'\n";
         }
 
         void ParseArgs(int argc, char *argv[])

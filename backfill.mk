@@ -129,6 +129,9 @@ $(COREDIR)/include/IQueryHandler.h: spiking-model-gpu/include/IQueryHandler.h
 $(COREDIR)/include/CommandControlHandler.h: spiking-model-gpu/include/CommandControlHandler.h
 	cp spiking-model-gpu/include/CommandControlHandler.h $(COREDIR)/include/
 
+$(COREDIR)/include/IModelRunner.h: spiking-model-gpu/include/IModelRunner.h
+	cp spiking-model-gpu/include/IModelRunner.h $(COREDIR)/include/
+
 $(COREDIR)/include/NeuronRecordCommon.h: spiking-model-gpu/include/NeuronRecordCommon.h
 	cp spiking-model-gpu/include/NeuronRecordCommon.h $(COREDIR)/include/
 
