@@ -43,6 +43,8 @@ namespace embeddedpenguins::gpu::neuron::model
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
         ModelEngineContext<RECORDTYPE>& Context() { return context_; }
+        void Pause() { context_.Pause = true; }
+        void Continue() { context_.Pause = false; }
 
     public:
         ModelEngine() = delete;
@@ -61,6 +63,11 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
     public:
+        bool Initialize()
+        {
+            return context_.Initialize();
+        }
+
         bool Run()
         {
             startTime_ = high_resolution_clock::now();
@@ -75,10 +82,13 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void Quit()
         {
+            context_.Run = false;
+            /*
             {
                 lock_guard<mutex> lock(context_.Mutex);
                 context_.Quit = true;
             }
+            */
             context_.Cv.notify_one();
         }
 

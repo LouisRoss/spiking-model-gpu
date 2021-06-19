@@ -40,7 +40,6 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_(carrier),
             configuration_(configuration)
         {
-            LoadOptionalDimensions();
         }
 
         GpuModelCarrier& Carrier() { return carrier_; }
@@ -48,8 +47,14 @@ namespace embeddedpenguins::gpu::neuron::model
         const unsigned int Width() const { return width_; }
         const unsigned int Height() const { return height_; }
 
+        //
+        // Unpack needed parameters from the configuration and allocate
+        // both CPU and GPU memory necessary to contain the model.
+        //
         bool AllocateModel(unsigned long int modelSize = 0)
         {
+            LoadOptionalDimensions();
+
             if (!CreateModel(modelSize))
             {
                 cout << "Unable to create model of size " << modelSize << "\n";

@@ -13,9 +13,13 @@
 #include "ConfigurationRepository.h"
 #include "ModelInitializerProxy.h"
 
+#include "IModelRunner.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
 #include "ModelEngine.h"
+#include "ICommandControlAcceptor.h"
+#include "IQueryHandler.h"
+#include "CommandControlHandler.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -30,8 +34,12 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::ifstream;
     using nlohmann::json;
 
+    using embeddedpenguins::core::neuron::model::IModelRunner;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
+    using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
+    using embeddedpenguins::core::neuron::model::IQueryHandler;
+    using embeddedpenguins::core::neuron::model::CommandControlHandler;
 
     //
     // Wrap the most common startup and teardown sequences to run a model
@@ -45,44 +53,162 @@ namespace embeddedpenguins::gpu::neuron::model
     // the model engine object, and all configuration defined for the model.
     //
     template<class RECORDTYPE>
-    class ModelRunner
+    class ModelRunner : public IModelRunner
     {
         bool valid_ { false };
+        string reason_ {};
         string controlFile_ {};
 
         ConfigurationRepository configuration_ {};
+        GpuModelCarrier carrier_ {};
+        GpuModelHelper<RECORDTYPE> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
+        vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
+        unique_ptr<IQueryHandler> queryHandler_ {};
 
     public:
+        virtual const string& Reason() const override { return reason_; }
+        virtual const string& ControlFile() const override { return controlFile_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
-        const ConfigurationRepository& getConfigurationRepository() const { return configuration_; }
-        const json& Control() const { return configuration_.Control(); }
-        const json& Configuration() const { return configuration_.Configuration(); }
-        const json& Monitor() const { return configuration_.Monitor(); }
-        const json& Settings() const { return configuration_.Settings(); }
-        const microseconds EnginePeriod() const { return modelEngine_->EnginePeriod(); }
-        microseconds& EnginePeriod() { return modelEngine_->EnginePeriod(); }
+        virtual const ConfigurationRepository& getConfigurationRepository() const override { return configuration_; }
+        virtual const json& Control() const override { return configuration_.Control(); }
+        virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual const json& Monitor() const override { return configuration_.Monitor(); }
+        virtual const json& Settings() const override { return configuration_.Settings(); }
+        virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
+        virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
         ModelEngineContext<RECORDTYPE>& Context() const { return modelEngine_->Context(); }
+        GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
 
     public:
-        ModelRunner(int argc, char* argv[])
+        //
+        // Usage should follow this sequence:
+        // 1. Construct a new instance.
+        // 2. Add any required command & control acceptors with AddCommandControlAcceptor().
+        // 3. Call Initialize() (one time only) with the command line arguments.
+        // 4. Give the the C&C acceptors run time on the main thread by calling RunCommandControl().
+        //    This will return only after the model terminates for the final time.
+        // Call sequences of the following to control as needed (typically from within a C&C acceptor)
+        //    * RunWithNewModel()
+        //    * RunWithExistingModel()
+        //    * Pause()
+        //    * Continue()
+        //    * Quit()
+        //    * WaitForQuit()
+        //
+        ModelRunner() :
+            helper_(carrier_, configuration_)
         {
-            ParseArgs(argc, argv);
+            queryHandler_ = std::move(make_unique<CommandControlHandler<RECORDTYPE>>(*this));
+        }
 
-            if (valid_)
-                valid_ = configuration_.InitializeConfiguration(controlFile_);
+        ModelRunner(unique_ptr<IQueryHandler> queryHandler) :
+            helper_(carrier_, configuration_),
+            queryHandler_(std::move(queryHandler))
+        {
         }
 
         //
-        // Ensure the model is created and initialized, then start
-        // it running asynchronously.
+        // Multiple command & control acceptors (which must implement ICommandControlAcceptor)
+        // may be added to the model runner, and each will be given time to run on the main thread.
         //
-        bool Run(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
+        virtual void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor) override
         {
+            cout << "Adding command and control acceptor " << commandControlAcceptor->Description() << " to runner\n";
+            commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
+        }
+
+        //
+        // After all C&C acceptors are added, initialize with the command line argments.
+        // If a control file was part of the command line, the model will be automatically
+        // run with that control file.
+        //
+        virtual bool Initialize(int argc, char* argv[]) override
+        {
+            cout << "Runner parsing argument\n";
+            ParseArgs(argc, argv);
+
             if (!valid_)
                 return false;
 
-            return RunModelEngine(carrier, helper);
+            if (PrepareControlFile())
+                InitializeConfiguration();
+
+            return valid_;
+        }
+
+        //
+        // All C&C acceptors are given some run time on the main thread by calling here.
+        // This will not return until one C&C acceptor sees its quit command.
+        //
+        virtual void RunCommandControl() override
+        {
+            auto quit { false };
+            while (!quit)
+            {
+                for_each(
+                    commandControlAcceptors_.begin(), 
+                    commandControlAcceptors_.end(), 
+                    [this, &quit](auto& acceptor)
+                    {
+                        quit |= acceptor->AcceptAndExecute(this->queryHandler_);
+                    }
+                );
+            }
+
+            // Make sure we are not paused before stopping.
+            Continue();
+        }
+
+        virtual bool RunWithNewModel(const string& controlFile) override
+        {
+            controlFile_ = controlFile;
+
+            return RunWithExistingModel();
+        }
+
+
+        virtual bool RunWithExistingModel() override
+        {
+            if (PrepareControlFile())
+            {
+                InitializeConfiguration();
+
+                if (!valid_)
+                    return false;
+
+                return Run();
+            }
+
+            return true;
+        }
+
+        //
+        // Set the model engine into the paused state.
+        //
+        virtual bool Pause() override
+        {
+            if (modelEngine_)
+            {
+                modelEngine_->Pause();
+                return true;
+            }
+
+            return false;
+        }
+
+        //
+        // Ensure the model engine is not in the paused state.
+        //
+        virtual bool Continue() override
+        {
+            if (modelEngine_)
+            {
+                modelEngine_->Continue();
+                return true;
+            }
+
+            return false;
         }
 
         //
@@ -90,21 +216,104 @@ namespace embeddedpenguins::gpu::neuron::model
         // and return immediately.  To guarantee it has stopped,
         // call WaitForQuit().
         //
-        void Quit()
+        virtual void Quit() override
         {
-            modelEngine_->Quit();
+            if (modelEngine_)
+                modelEngine_->Quit();
         }
 
         //
         // Call Quit() and wait until the model engine stops.
         // It is legal to call this after Quit().
         //
-        void WaitForQuit()
+        virtual void WaitForQuit() override
         {
-            modelEngine_->WaitForQuit();
+            if (modelEngine_)
+            {
+                modelEngine_->WaitForQuit();
+                delete(modelEngine_.release());
+            }
+        }
+
+        //
+        // Render the current model engine status into a single JSON object.
+        //
+        virtual json RenderStatus() override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().Render();
+
+            return json {};
+        }
+
+        //
+        // Render only the dynamic portion of the status into a JSON object.
+        //
+        virtual json RenderDynamicStatus() override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().RenderDynamic();
+
+            return json {};
+        }
+
+        //
+        // Accept a JSON object with a collection of name/value pairs
+        // and set the value to each named parameter.
+        //
+        virtual bool SetValue(const json& controlValues) override
+        {
+            if (modelEngine_)
+                return modelEngine_->Context().SetValue(controlValues);
+
+            return false;
         }
 
     private:
+        void InitializeConfiguration()
+        {
+            cout << "Runner initializing configuration\n";
+            valid_ = configuration_.InitializeConfiguration(controlFile_);
+
+            if (!valid_)
+            {
+                reason_ = "Unable to initialize configuration from control file " + controlFile_;
+                return;
+            }
+
+            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
+                [this](auto& acceptor)
+                { 
+                    cout << "Runner initializing command and control acceptor" << acceptor->Description() << "\n"; 
+                    if (!acceptor->Initialize())
+                    {
+                        this->reason_ = "Failed initializing command and control acceptor " + acceptor->Description();
+                        this->valid_ = false;
+                    }
+                });
+        }
+
+        //
+        // Ensure the model is created and initialized, then start
+        // it running asynchronously.
+        //
+        bool Run()
+        {
+            if (!valid_)
+            {
+                cout << "Failed to run model engine because runner is in an invalid state\n";
+                return false;
+            }
+
+            WaitForQuit();
+
+            if (!modelEngine_)
+                if (!InitializeModelEngine())
+                    return false;
+
+            return RunModelEngine();
+        }
+
         void ParseArgs(int argc, char *argv[])
         {
             static string usage {
@@ -114,12 +323,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 "and monitor) for the test to run.\n"
             };
 
-            if (argc < 2)
-            {
-                cout << "Usage: " << argv[0] << usage;
-                return;
-            }
-
             for (auto i = 1; i < argc; i++)
             {
                 const auto& arg = argv[i];
@@ -127,28 +330,58 @@ namespace embeddedpenguins::gpu::neuron::model
                 controlFile_ = arg;
             }
 
-            if (controlFile_.empty())
-            {
-                cout << "Usage: " << argv[0] << usage;
-                return;
-            }
-
-            if (controlFile_.length() < 5 || controlFile_.substr(controlFile_.length()-5, controlFile_.length()) != ".json")
-                controlFile_ += ".json";
-
-            cout << "Using control file " << controlFile_ << "\n";
-
             valid_ = true;
+
+            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
+                [&argc, &argv, this](auto& acceptor)
+                { 
+                    cout << "Runner parsing arguments for command and control acceptor" << acceptor->Description() << "\n"; 
+                    if (!acceptor->ParseArguments(argc, argv))
+                    {
+                        this->reason_ = "Failed initializing command and control acceptor " + acceptor->Description();
+                        this->valid_ = false;
+                    }
+                });
         }
 
-        bool RunModelEngine(GpuModelCarrier& carrier, GpuModelHelper<RECORDTYPE>& helper)
+        bool PrepareControlFile()
         {
-            // Create and run the model engine.
-            modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
-                carrier, 
-                configuration_,
-                helper);
+            if (controlFile_.empty())
+            {
+                cout << "No control file given, not running any model\n";
+                return false;
+            }
+            else
+            {
+                if (controlFile_.length() < 5 || controlFile_.substr(controlFile_.length()-5, controlFile_.length()) != ".json")
+                    controlFile_ += ".json";
 
+                cout << "Using control file " << controlFile_ << "\n";
+            }
+
+            return valid_;
+        }
+
+        bool InitializeModelEngine()
+        {
+            // Ensure no model engine, stop and delete first if needed.
+            WaitForQuit();
+
+            // Create the model engine.
+            modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
+                carrier_, 
+                configuration_,
+                helper_);
+
+            return modelEngine_->Initialize();
+        }
+
+        bool RunModelEngine()
+        {
+            if (!modelEngine_)
+                return false;
+
+            // Run the model engine.
             return modelEngine_->Run();
         }
     };

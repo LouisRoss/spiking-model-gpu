@@ -14,9 +14,9 @@ spiking-model-gpu/include/ConfigurationRepository.h
 spiking-model-gpu/include/KeyListener.h
 spiking-model-gpu/include/Log.h
 spiking-model-gpu/include/ModelInitializerProxy.h
-spiking-model-gpu/include/ModelUi.h
 spiking-model-gpu/include/ICommandControlAcceptor.h
 spiking-model-gpu/include/CommandControlListenSocket.h
+spiking-model-gpu/include/CommandControlConsoleUi.h
 spiking-model-gpu/include/CommandControlSocket.h
 spiking-model-gpu/include/NeuronRecordCommon.h
 spiking-model-gpu/include/Recorder.h
@@ -27,3 +27,4 @@ spiking-model-gpu/include/CommandControlHandler.h
 spiking-model-gpu/include/IQueryHandler.h
 spiking-model-gpu/include/QueryResponseListenSocket.h
 spiking-model-gpu/include/QueryResponseSocket.h
+spiking-model-gpu/include/Performance.h

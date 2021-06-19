@@ -14,6 +14,7 @@
 #include "ConfigurationRepository.h"
 #include "Log.h"
 #include "Recorder.h"
+#include "Performance.h"
 
 #include "GpuModelHelper.h"
 
@@ -34,6 +35,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::LogLevel;
     using embeddedpenguins::core::neuron::model::Recorder;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::Performance;
 
     //
     // Carry the public information defining the model engine.
@@ -44,7 +46,7 @@ namespace embeddedpenguins::gpu::neuron::model
     struct ModelEngineContext
     {
         atomic<bool> Run { false };
-        bool Quit { false };
+        atomic<bool> Pause { false };
         mutex Mutex;
         condition_variable Cv;
 
@@ -62,6 +64,7 @@ namespace embeddedpenguins::gpu::neuron::model
         microseconds PartitionTime { };
         unsigned long long int Iterations { 1LL };
         long long int TotalWork { 0LL };
+        Performance PerformanceCounters { };
 
         ModelEngineContext(const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
             Configuration(configuration),
@@ -69,22 +72,43 @@ namespace embeddedpenguins::gpu::neuron::model
             Record(Iterations),
             EnginePeriod(1000)
         {
-            // Create and run the model engine.
-            const json& modelJson = Configuration.Configuration()["Model"];
-            if (modelJson.is_null()) return;
+        }
 
-            const json& modelTicksJson = modelJson["ModelTicks"];
-            if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
-                EnginePeriod = microseconds(modelTicksJson.get<int>());
+        //
+        // Initialize configured context properties after creation.
+        // NOTE: assumes the configuration has been loaded first.
+        //
+        bool Initialize()
+        {
+            // Create and run the model engine.
+            if (!Configuration.Configuration().contains("Model"))
+                return false;
+
+            const json& modelJson = Configuration.Configuration()["Model"];
+            if (!modelJson.is_object())
+                return false;
+
+            if (modelJson.contains("ModelTicks"))
+            {
+                const json& modelTicksJson = modelJson["ModelTicks"];
+                if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
+                    EnginePeriod = microseconds(modelTicksJson.get<int>());
+            }
 
             RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
+
+            return true;
         }
 
+        //
+        // Render all the context properties as a single JSON object.
+        //
         json Render()
         {
             return json {
                 {"run", Run ? true : false},
+                {"pause", Pause ? true : false},
                 {"loglevel", LoggingLevel},
                 {"logfile", LogFile.c_str()},
                 {"recordfile", RecordFile.c_str()},
@@ -92,10 +116,30 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
                 {"iterations", Iterations},
-                {"totalwork", TotalWork}
+                {"totalwork", TotalWork},
+                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
             };
         }
 
+        //
+        // Render all the dynamic context properties as a single JSON object.
+        //
+        json RenderDynamic()
+        {
+            return json {
+                {"run", Run ? true : false},
+                {"pause", Pause ? true : false},
+                {"engineinit", EngineInitialized ? true : false},
+                {"enginefail", EngineInitializeFailed ? true : false},
+                {"iterations", Iterations},
+                {"totalwork", TotalWork},
+                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
+            };
+        }
+
+        //
+        // Set one or more context properties from the subset passed as a JSON object.
+        //
         bool SetValue(const json& controlValues)
         {
             bool success {true};

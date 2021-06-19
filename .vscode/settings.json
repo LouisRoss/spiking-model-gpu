@@ -69,7 +69,13 @@
         "valarray": "cpp",
         "__nullptr": "cpp",
         "__functional_base": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "NeuronModel.cpp": "cuda-cpp",
+        "IModelRunner.h": "cuda-cpp",
+        "NeuronModel.h": "cuda-cpp",
+        "ModelAnticipateInitializer.cpp": "cuda-cpp",
+        "Performance.h": "cuda-cpp",
+        "filesystem": "cpp"
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Enabled"

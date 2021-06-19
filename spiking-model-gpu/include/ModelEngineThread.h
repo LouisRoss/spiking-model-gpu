@@ -33,6 +33,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using time_point = std::chrono::high_resolution_clock::time_point;
     using std::chrono::microseconds;
     using std::chrono::duration_cast;
+    using std::chrono::duration;
+    using namespace std::chrono_literals;
     using std::cout;
     using std::cerr;
 
@@ -76,29 +78,32 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void operator() ()
         {
-            while (!context_.Run) { std::this_thread::yield(); }
-
-            try
+            do
             {
-                if (Initialize())
-                    MainLoop();
-                Cleanup();
-            }
-            catch(const std::exception& e)
-            {
-                cout << "ModelEngine exception while running: " << e.what() << '\n';
-            }
+                while (!context_.Run) { std::this_thread::yield(); }
 
-            Log::Merge(context_.Logger);
-            Recorder<NeuronRecord>::Merge(context_.Record);
-            cout << "Writing log file to " << context_.LogFile << "... " << std::flush;
-            Log::Print(context_.LogFile.c_str());
-            cout << "Done\n";
-            cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
-            Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
-            cout << "Done\n";
+                try
+                {
+                    if (Initialize())
+                        MainLoop();
+                    Cleanup();
+                }
+                catch(const std::exception& e)
+                {
+                    cout << "ModelEngine exception while running: " << e.what() << '\n';
+                }
 
-            context_.Run = false;
+                context_.Run = false;
+
+                Log::Merge(context_.Logger);
+                Recorder<NeuronRecord>::Merge(context_.Record);
+                cout << "Writing log file to " << context_.LogFile << "... " << std::flush;
+                Log::Print(context_.LogFile.c_str());
+                cout << "Done\n";
+                cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
+                Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
+                cout << "Done\n";
+            } while (context_.Run);
         }
 
         unsigned long long int GetIterations()
@@ -111,12 +116,14 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             if (!context_.Helper.AllocateModel())
             {
+                cout << "ModelEngineThread.Initialize failed at context_.Helper.AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
 
             if (!InitializeModel())
             {
+                cout << "ModelEngineThread.Initialize failed at InitializeModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
@@ -128,12 +135,14 @@ namespace embeddedpenguins::gpu::neuron::model
 
             if (!inputStreamer_.Valid())
             {
+                cout << "ModelEngineThread.Initialize failed at inputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
 
             if (!outputStreamer_.Valid())
             {
+                cout << "ModelEngineThread.Initialize failed at outputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
@@ -151,6 +160,7 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "ModelEngine starting main loop\n";
             context_.Logger.Logit();
 #endif
+            long long int engineElapsed;
 
             WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE> inputStreamThread(inputStreamer_);
             WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE> outputStreamThread(outputStreamer_);
@@ -158,6 +168,11 @@ namespace embeddedpenguins::gpu::neuron::model
             auto quit {false};
             do
             {
+                auto needResync { false };
+                while (context_.Pause) { needResync = true; std::this_thread::sleep_for(5ms); std::this_thread::yield(); }
+                if (needResync) nextScheduledTick_ = high_resolution_clock::now();
+
+
                 quit = WaitForWorkOrQuit();
                 if (!quit)
                 {
@@ -168,9 +183,11 @@ namespace embeddedpenguins::gpu::neuron::model
                     context_.Logger.Logit();
 
                 }
+
+                engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
             }
             while (!quit);
-            auto engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
+
             auto partitionElapsed = context_.PartitionTime.count();
 
 #ifndef NOLOG
@@ -190,12 +207,12 @@ namespace embeddedpenguins::gpu::neuron::model
         bool WaitForWorkOrQuit()
         {
             auto quit { true };
-            nextScheduledTick_ += context_.EnginePeriod;
+
             {
                 unique_lock<mutex> lock(context_.Mutex);
-                context_.Cv.wait_until(lock, nextScheduledTick_, [this](){ return context_.Quit; });
+                context_.Cv.wait_until(lock, nextScheduledTick_, [this](){ return !context_.Run; });
 
-                quit = context_.Quit;
+                quit = !context_.Run;
                 nextScheduledTick_ += context_.EnginePeriod;
             }
 
