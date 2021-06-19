@@ -14,6 +14,7 @@
 #include "ConfigurationRepository.h"
 #include "Log.h"
 #include "Recorder.h"
+#include "Performance.h"
 
 #include "GpuModelHelper.h"
 
@@ -34,6 +35,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::LogLevel;
     using embeddedpenguins::core::neuron::model::Recorder;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::Performance;
 
     //
     // Carry the public information defining the model engine.
@@ -62,6 +64,7 @@ namespace embeddedpenguins::gpu::neuron::model
         microseconds PartitionTime { };
         unsigned long long int Iterations { 1LL };
         long long int TotalWork { 0LL };
+        Performance PerformanceCounters { };
 
         ModelEngineContext(const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
             Configuration(configuration),
@@ -113,7 +116,8 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
                 {"iterations", Iterations},
-                {"totalwork", TotalWork}
+                {"totalwork", TotalWork},
+                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
             };
         }
 
@@ -128,7 +132,8 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
                 {"iterations", Iterations},
-                {"totalwork", TotalWork}
+                {"totalwork", TotalWork},
+                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
             };
         }
 

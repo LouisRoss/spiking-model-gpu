@@ -34,6 +34,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::chrono::microseconds;
     using std::chrono::duration_cast;
     using std::chrono::duration;
+    using namespace std::chrono_literals;
     using std::cout;
     using std::cerr;
 
@@ -113,14 +114,12 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
-            /*
             if (!context_.Helper.AllocateModel())
             {
                 cout << "ModelEngineThread.Initialize failed at context_.Helper.AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
-            */
 
             if (!InitializeModel())
             {
@@ -170,7 +169,7 @@ namespace embeddedpenguins::gpu::neuron::model
             do
             {
                 auto needResync { false };
-                while (context_.Pause) { needResync = true; std::this_thread::yield(); }
+                while (context_.Pause) { needResync = true; std::this_thread::sleep_for(5ms); std::this_thread::yield(); }
                 if (needResync) nextScheduledTick_ = high_resolution_clock::now();
 
 

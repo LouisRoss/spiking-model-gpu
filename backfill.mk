@@ -17,7 +17,7 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py 
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h Performance.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
@@ -128,6 +128,9 @@ $(COREDIR)/include/IQueryHandler.h: spiking-model-gpu/include/IQueryHandler.h
 
 $(COREDIR)/include/CommandControlHandler.h: spiking-model-gpu/include/CommandControlHandler.h
 	cp spiking-model-gpu/include/CommandControlHandler.h $(COREDIR)/include/
+
+$(COREDIR)/include/Performance.h: spiking-model-gpu/include/Performance.h
+	cp spiking-model-gpu/include/Performance.h $(COREDIR)/include/
 
 $(COREDIR)/include/IModelRunner.h: spiking-model-gpu/include/IModelRunner.h
 	cp spiking-model-gpu/include/IModelRunner.h $(COREDIR)/include/

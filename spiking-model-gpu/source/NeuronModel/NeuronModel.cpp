@@ -64,10 +64,13 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        if (!modelRunner.RunWithExistingModel())
+        if (!modelRunner.ControlFile().empty())
         {
-            cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
-            return 1;
+            if (!modelRunner.RunWithExistingModel())
+            {
+                cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
+                return 1;
+            }
         }
 
         modelRunner.RunCommandControl();

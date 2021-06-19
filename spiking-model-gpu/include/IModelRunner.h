@@ -23,6 +23,7 @@ namespace embeddedpenguins::core::neuron::model
         virtual ~IModelRunner() = default;
 
         virtual const string& Reason() const = 0;
+        virtual const string& ControlFile() const = 0;
         virtual const ConfigurationRepository& getConfigurationRepository() const = 0;
         virtual const json& Control() const = 0;
         virtual const json& Configuration() const = 0;

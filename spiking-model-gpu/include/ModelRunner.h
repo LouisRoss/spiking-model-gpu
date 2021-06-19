@@ -68,6 +68,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     public:
         virtual const string& Reason() const override { return reason_; }
+        virtual const string& ControlFile() const override { return controlFile_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
         virtual const ConfigurationRepository& getConfigurationRepository() const override { return configuration_; }
         virtual const json& Control() const override { return configuration_.Control(); }
@@ -130,12 +131,8 @@ namespace embeddedpenguins::gpu::neuron::model
             if (!valid_)
                 return false;
 
-            PrepareControlFile();
-
-            if (!valid_)
-                return false;
-
-            InitializeConfiguration();
+            if (PrepareControlFile())
+                InitializeConfiguration();
 
             return valid_;
         }
@@ -173,17 +170,17 @@ namespace embeddedpenguins::gpu::neuron::model
 
         virtual bool RunWithExistingModel() override
         {
-            PrepareControlFile();
+            if (PrepareControlFile())
+            {
+                InitializeConfiguration();
 
-            if (!valid_)
-                return false;
+                if (!valid_)
+                    return false;
 
-            InitializeConfiguration();
+                return Run();
+            }
 
-            if (!valid_)
-                return false;
-
-            return Run();
+            return true;
         }
 
         //
@@ -284,15 +281,6 @@ namespace embeddedpenguins::gpu::neuron::model
                 return;
             }
 
-            if (!helper_.AllocateModel())
-            {
-                cout << "ModelRunner.InitializeConfiguration failed at helper_.AllocateModel()\n";
-                modelEngine_->Context().EngineInitializeFailed = true;
-                reason_ = "Helper failed to initialize configuration or allocate model memory";
-                valid_ = false;
-                return;
-            }
-
             for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
                 [this](auto& acceptor)
                 { 
@@ -360,8 +348,8 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             if (controlFile_.empty())
             {
-                valid_ = false;
                 cout << "No control file given, not running any model\n";
+                return false;
             }
             else
             {

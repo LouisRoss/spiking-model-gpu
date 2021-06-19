@@ -27,3 +27,4 @@ spiking-model-gpu/include/CommandControlHandler.h
 spiking-model-gpu/include/IQueryHandler.h
 spiking-model-gpu/include/QueryResponseListenSocket.h
 spiking-model-gpu/include/QueryResponseSocket.h
+spiking-model-gpu/include/Performance.h
