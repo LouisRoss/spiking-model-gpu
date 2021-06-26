@@ -1,7 +1,6 @@
 #include <iostream>
 #include <memory>
 #include <exception>
-#include <functional>
 
 #include <cuda_runtime_api.h>
 

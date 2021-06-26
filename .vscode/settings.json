@@ -75,7 +75,15 @@
         "NeuronModel.h": "cuda-cpp",
         "ModelAnticipateInitializer.cpp": "cuda-cpp",
         "Performance.h": "cuda-cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "SensorInputFile.cpp": "cuda-cpp",
+        "SensorInputSocket.h": "cuda-cpp",
+        "SensorInputSocket.cpp": "cuda-cpp",
+        "SensorInputListenSocket.h": "cuda-cpp",
+        "WorkerCoreThread.h": "cuda-cpp",
+        "SensorInputDataSocket.h": "cuda-cpp",
+        "inetserverstream.cpp": "cuda-cpp",
+        "inetserverstream.hpp": "cuda-cpp",
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Enabled"

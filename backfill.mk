@@ -17,13 +17,13 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py 
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h Performance.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h Performance.h WorkerThread.h
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
 MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
 
-_MODELSENSORS = ISensorInput.h SensorInputFile.h SensorSonataFile.h 
+_MODELSENSORS = ISensorInput.h SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h SensorSonataFile.h 
 MODELSENSORS = $(patsubst %,$(COREDIR)/include/SensorInputs/%,$(_MODELSENSORS))
 
 
@@ -132,6 +132,9 @@ $(COREDIR)/include/CommandControlHandler.h: spiking-model-gpu/include/CommandCon
 $(COREDIR)/include/Performance.h: spiking-model-gpu/include/Performance.h
 	cp spiking-model-gpu/include/Performance.h $(COREDIR)/include/
 
+$(COREDIR)/include/WorkerThread.h: spiking-model-gpu/include/WorkerThread.h
+	cp spiking-model-gpu/include/WorkerThread.h $(COREDIR)/include/
+
 $(COREDIR)/include/IModelRunner.h: spiking-model-gpu/include/IModelRunner.h
 	cp spiking-model-gpu/include/IModelRunner.h $(COREDIR)/include/
 
@@ -175,6 +178,15 @@ $(COREDIR)/include/SensorInputs/ISensorInput.h: spiking-model-gpu/include/Sensor
 
 $(COREDIR)/include/SensorInputs/SensorInputFile.h: spiking-model-gpu/include/SensorInputs/SensorInputFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorInputFile.h $(COREDIR)/include/SensorInputs/
+
+$(COREDIR)/include/SensorInputs/SensorInputSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputSocket.h $(COREDIR)/include/SensorInputs/
+
+$(COREDIR)/include/SensorInputs/SensorInputListenSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h $(COREDIR)/include/SensorInputs/
+
+$(COREDIR)/include/SensorInputs/SensorInputDataSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h $(COREDIR)/include/SensorInputs/
 
 $(COREDIR)/include/SensorInputs/SensorSonataFile.h: spiking-model-gpu/include/SensorInputs/SensorSonataFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorSonataFile.h $(COREDIR)/include/SensorInputs/

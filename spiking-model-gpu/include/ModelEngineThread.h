@@ -43,6 +43,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::Log;
     using embeddedpenguins::core::neuron::model::Recorder;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
+    using embeddedpenguins::core::neuron::model::WorkerThread;
 
     //
     // The model engine does its work in this thread object.
@@ -162,8 +163,8 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             long long int engineElapsed;
 
-            WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE> inputStreamThread(inputStreamer_);
-            WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE> outputStreamThread(outputStreamer_);
+            WorkerThread<WorkerInputStreamer<RECORDTYPE>> inputStreamThread(inputStreamer_);
+            WorkerThread<WorkerOutputStreamer<RECORDTYPE>> outputStreamThread(outputStreamer_);
 
             auto quit {false};
             do
@@ -246,8 +247,8 @@ namespace embeddedpenguins::gpu::neuron::model
             return true;
         }
 
-        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE>& inputStreamThread,
-                WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE>& outputStreamThread)
+        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,
+                WorkerThread<WorkerOutputStreamer<RECORDTYPE>>& outputStreamThread)
         {
             // Get input for this tick, copy input to device.
 #ifndef NOLOG
