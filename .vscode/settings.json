@@ -84,6 +84,13 @@
         "SensorInputDataSocket.h": "cuda-cpp",
         "inetserverstream.cpp": "cuda-cpp",
         "inetserverstream.hpp": "cuda-cpp",
+        "ISpikeOutput.h": "cuda-cpp",
+        "SpikeOutputProxy.h": "cuda-cpp",
+        "WorkerOutputStreamer.h": "cuda-cpp",
+        "SpikeOutputRecord.cpp": "cuda-cpp",
+        "SpikeOutputRecord.h": "cuda-cpp",
+        "SpikeOutputSocket.h": "cuda-cpp",
+        "SpikeOutputSocket.cpp": "cuda-cpp"
     },
     "cmake.configureOnOpen": true,
     "C_Cpp.errorSquiggles": "Enabled"

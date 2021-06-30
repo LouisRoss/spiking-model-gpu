@@ -9,7 +9,9 @@
 #include "NeuronRecordCommon.h"
 
 #include "NeuronCommon.h"
+#ifdef ALLCONNECTIONS
 #include "NeuronNode.h"
+#endif
 
 namespace embeddedpenguins::gpu::neuron::model
 {

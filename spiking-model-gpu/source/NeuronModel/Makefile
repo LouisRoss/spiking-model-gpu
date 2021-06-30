@@ -324,7 +324,7 @@ CDIR=../libsocket/C
 _LIBSOCKETOBJS = libinetsocket.o dgramclient.o dgramoverstream.o exception.o framing.o inetbase.o inetclientdgram.o inetclientstream.o inetdgram.o inetserverdgram.o inetserverstream.o select.o socket.o streamclient.o
 LIBSOCKETOBJS = $(patsubst %,$(ODIR)/%,$(_LIBSOCKETOBJS))
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h CommandControlConsoleUi.h ICommandControlAcceptor.h IModelRunner.h QueryResponseListenSocket.h QueryResponseSocket.h IQueryHandler.h CommandControlHandler.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SensorInputProxy.h WorkerInputStreamer.h WorkerOutputStreamer.h WorkerThread.h Performance.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h CommandControlConsoleUi.h ICommandControlAcceptor.h IModelRunner.h QueryResponseListenSocket.h QueryResponseSocket.h IQueryHandler.h CommandControlHandler.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SensorInputProxy.h WorkerInputStreamer.h SpikeOutputProxy.h WorkerOutputStreamer.h WorkerThread.h Performance.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
@@ -332,6 +332,9 @@ INITIALIZERDEPS = $(patsubst %,$(IDIR)/Initializers/%,$(_INITIALIZERDEPS))
 
 _SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h  SensorSonataFile.h
 SENSORINPUTDEPS = $(patsubst %,$(IDIR)/SensorInputs/%,$(_SENSORINPUTDEPS))
+
+_SPIKEOUTPUTDEPS = ISpikeOutput.h  SpikeOutputRecord.h  SpikeOutputSocket.h
+SPIKEOUTPUTDEPS = $(patsubst %,$(IDIR)/SpikeOutputs/%,$(_SPIKEOUTPUTDEPS))
 
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h
 SONATADEPS = $(patsubst %,$(IDIR)/persistence/sonata/%,$(_SONATADEPS))

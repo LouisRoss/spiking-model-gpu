@@ -3,11 +3,12 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <tuple>
+#include <memory>
 
 #include "nlohmann/json.hpp"
 
 #include "ConfigurationRepository.h"
-#include "Recorder.h"
 #include "NeuronRecordCommon.h"
 
 #include "GpuModelCarrier.h"
@@ -17,15 +18,15 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::cout;
     using std::max_element;
     using std::vector;
+    using std::tuple;
+    using std::unique_ptr;
 
     using nlohmann::json;
 
     using embeddedpenguins::core::neuron::model::NeuronRecordType;
 
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
-    using embeddedpenguins::core::neuron::model::Recorder;
 
-    template<class RECORDTYPE>
     class GpuModelHelper
     {
         GpuModelCarrier& carrier_;
@@ -209,45 +210,36 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 #endif
 
-        void RecordRelevantNeurons(Recorder<RECORDTYPE>& recorder)
+        vector<tuple<unsigned long long, short int, NeuronRecordType>> CollectRelevantNeurons()
         {
+            vector<tuple<unsigned long long, short int, NeuronRecordType>> relevantNeurons;
+
             if (!carrier_.Valid)
             {
                 cout << "GPU helper cannot record neurons with model in invalid state\n";
-                return;
             }
-
-            for (auto neuronIndex = 0; neuronIndex < carrier_.ModelSize(); neuronIndex++)
+            else
             {
-                auto& neuron = carrier_.NeuronsHost[neuronIndex];
-                if (IsSpikeTick(neuron.TicksSinceLastSpike))
+                for (auto neuronIndex = 0; neuronIndex < carrier_.ModelSize(); neuronIndex++)
                 {
-                    RECORDTYPE record(NeuronRecordType::Spike, neuronIndex, neuron.Activation);
-                    recorder.Record(record);
-                }
-                else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
-                {
-                    RECORDTYPE record(NeuronRecordType::Refractory, neuronIndex, neuron.Activation);
-                    recorder.Record(record);
-                }
-                else if (IsActiveRecently(neuron.TicksSinceLastSpike))
-                {
-                    RECORDTYPE record(NeuronRecordType::Decay, neuronIndex, neuron.Activation);
-                    recorder.Record(record);
-                }
+                    auto& neuron = carrier_.NeuronsHost[neuronIndex];
 
-#ifdef SYNAPSE_RECORD
-                auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
-                for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
-                {
-                    if (synapsesForNeuron[synapseIndex].TickSinceLastSignal == SynapseSignalTimeMax)
+                    if (IsSpikeTick(neuron.TicksSinceLastSpike))
                     {
-                        RECORDTYPE record(NeuronRecordType::InputSignal, neuronIndex, neuron.Activation, synapseIndex + 1, synapsesForNeuron[synapseIndex].Strength);
-                        recorder.Record(record);
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Spike));
+                    }
+                    else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
+                    {
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Refractory));
+                    }
+                    else if (IsActiveRecently(neuron.TicksSinceLastSpike))
+                    {
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Decay));
                     }
                 }
-#endif
             }
+
+            return relevantNeurons;
         }
 
         unsigned long int FindRequiredSynapseCounts()

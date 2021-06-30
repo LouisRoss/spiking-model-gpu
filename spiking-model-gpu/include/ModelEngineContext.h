@@ -13,10 +13,7 @@
 
 #include "ConfigurationRepository.h"
 #include "Log.h"
-#include "Recorder.h"
 #include "Performance.h"
-
-#include "GpuModelHelper.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -33,7 +30,6 @@ namespace embeddedpenguins::gpu::neuron::model
     
     using embeddedpenguins::core::neuron::model::Log;
     using embeddedpenguins::core::neuron::model::LogLevel;
-    using embeddedpenguins::core::neuron::model::Recorder;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::Performance;
 
@@ -42,21 +38,18 @@ namespace embeddedpenguins::gpu::neuron::model
     // This includes synchronization between the model engine and its thread;
     // configuration and logging; all workers; and statistics about the run.
     //
-    template<class RECORDTYPE>
     struct ModelEngineContext
     {
         atomic<bool> Run { false };
         atomic<bool> Pause { false };
+        atomic<bool> RecordEnable { false };
         mutex Mutex;
         condition_variable Cv;
 
         const ConfigurationRepository& Configuration;
-        GpuModelHelper<RECORDTYPE>& Helper;
         Log Logger {};
         LogLevel LoggingLevel { LogLevel::Status };
-        Recorder<RECORDTYPE> Record;
         string LogFile {"ModelEngine.log"};
-        string RecordFile {"ModelEngineRecord.csv"};
 
         microseconds EnginePeriod;
         atomic<bool> EngineInitialized { false };
@@ -66,10 +59,8 @@ namespace embeddedpenguins::gpu::neuron::model
         long long int TotalWork { 0LL };
         Performance PerformanceCounters { };
 
-        ModelEngineContext(const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
+        ModelEngineContext(const ConfigurationRepository& configuration) :
             Configuration(configuration),
-            Helper(helper),
-            Record(Iterations),
             EnginePeriod(1000)
         {
         }
@@ -95,7 +86,6 @@ namespace embeddedpenguins::gpu::neuron::model
                     EnginePeriod = microseconds(modelTicksJson.get<int>());
             }
 
-            RecordFile = Configuration.ComposeRecordPath();
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
 
             return true;
@@ -111,7 +101,8 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"pause", Pause ? true : false},
                 {"loglevel", LoggingLevel},
                 {"logfile", LogFile.c_str()},
-                {"recordfile", RecordFile.c_str()},
+                {"recordfile", Configuration.ComposeRecordPath().c_str()},
+                {"recordenable", RecordEnable ? true : false},
                 {"engineperiod", EnginePeriod.count()},
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
@@ -145,6 +136,11 @@ namespace embeddedpenguins::gpu::neuron::model
             bool success {true};
             try
             {
+                if (controlValues.contains("recordenable"))
+                {
+                    RecordEnable = controlValues["recordenable"].get<bool>();
+                    cout << "Changed record enable to " << RecordEnable << "\n";
+                }
                 if (controlValues.contains("loglevel"))
                 {
                     LoggingLevel = (LogLevel)controlValues["loglevel"].get<int>();

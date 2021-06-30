@@ -61,7 +61,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         ConfigurationRepository configuration_ {};
         GpuModelCarrier carrier_ {};
-        GpuModelHelper<RECORDTYPE> helper_;
+        GpuModelHelper helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
         unique_ptr<IQueryHandler> queryHandler_ {};
@@ -77,8 +77,8 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const json& Settings() const override { return configuration_.Settings(); }
         virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
         virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
-        ModelEngineContext<RECORDTYPE>& Context() const { return modelEngine_->Context(); }
-        GpuModelHelper<RECORDTYPE>& Helper() { return helper_; }
+        ModelEngineContext& Context() const { return modelEngine_->Context(); }
+        GpuModelHelper& Helper() { return helper_; }
 
     public:
         //

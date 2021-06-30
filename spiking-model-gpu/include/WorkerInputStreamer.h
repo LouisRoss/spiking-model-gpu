@@ -33,7 +33,7 @@ namespace embeddedpenguins::gpu::neuron::model
         vector<unsigned long long int> dummyStreamedInput_ { };
 
         // NOTE: The declaration order of these fields is important.
-        ModelEngineContext<RECORDTYPE>& context_;
+        ModelEngineContext& context_;
         unique_ptr<ISensorInput> sensorInput_;
         bool valid_;
         vector<unsigned long long int>& streamedInput_;
@@ -43,7 +43,7 @@ namespace embeddedpenguins::gpu::neuron::model
         const vector<unsigned long long int>& StreamedInput() const { return streamedInput_; }
 
     public:
-        WorkerInputStreamer(ModelEngineContext<RECORDTYPE>& context) :
+        WorkerInputStreamer(ModelEngineContext& context) :
             context_(context),
             sensorInput_(CreateProxy()),
             valid_(sensorInput_->Connect("")),

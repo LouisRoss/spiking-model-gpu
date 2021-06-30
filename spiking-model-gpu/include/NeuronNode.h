@@ -10,7 +10,7 @@ namespace embeddedpenguins::gpu::neuron::model
         Inhibitory
     };
 
-    struct __align__(4) NeuronNode
+    struct NeuronNode
     {
         NeuronType Type;
         bool NextTickSpike;

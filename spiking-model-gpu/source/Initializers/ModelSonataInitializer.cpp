@@ -12,11 +12,11 @@ namespace embeddedpenguins::gpu::neuron::model
 
     // the class factories
 
-    extern "C" IModelInitializer<GpuModelHelper<NeuronRecord>>* create(GpuModelHelper<NeuronRecord>& helper) {
-        return new ModelSonataInitializer<GpuModelHelper<NeuronRecord>>(helper);
+    extern "C" IModelInitializer<GpuModelHelper>* create(GpuModelHelper& helper) {
+        return new ModelSonataInitializer<GpuModelHelper>(helper);
     }
 
-    extern "C" void destroy(IModelInitializer<GpuModelHelper<NeuronRecord>>* p) {
+    extern "C" void destroy(IModelInitializer<GpuModelHelper>* p) {
         delete p;
     }
 }
