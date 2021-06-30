@@ -45,8 +45,6 @@ int main(int argc, char* argv[])
 
     ModelRunner<NeuronRecord> modelRunner;
 
-    embeddedpenguins::core::neuron::model::Recorder<NeuronRecord>::Enable(false);
-
     modelRunner.AddCommandControlAcceptor(
         std::move(make_unique<GpuModelUi>(modelRunner))
     );
