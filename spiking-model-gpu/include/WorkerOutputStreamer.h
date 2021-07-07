@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <memory>
 #include <vector>
 
@@ -9,6 +10,7 @@
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    using std::string;
     using std::unique_ptr;
     using std::make_unique;
     using std::vector;
@@ -53,33 +55,72 @@ namespace embeddedpenguins::gpu::neuron::model
                 }
             }
 
+            for (auto& spikeOutput : spikeOutputs_)
+            {
+                spikeOutput->Flush();
+            }
+
             //helper_.PrintMonitoredNeurons();
         }
 
     private:
         void CreateProxies()
         {
-            string outputStreamerLocation { "" };
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
-            if (!executionJson.is_null())
+            if (!context_.Configuration.Configuration().contains("Execution"))
             {
-                const json& outputStreamersJson = executionJson["OutputStreamers"];
-                if (outputStreamersJson.is_array())
+                cout << "Configuration contains no 'Execution' element, not creating any output streamers\n";
+                return;
+            }
+
+            const json& executionJson = context_.Configuration.Configuration()["Execution"];
+            if (!executionJson.contains("OutputStreamers"))
+            {
+                cout << "Configuration 'Execution' element contains no 'OutputStreamers' subelement, not creating any output streamers\n";
+                return;
+            }
+
+            const json& outputStreamersJson = executionJson["OutputStreamers"];
+            if (outputStreamersJson.is_array())
+            {
+                for (auto& [key, outputStreamerJson] : outputStreamersJson.items())
                 {
-                    vector<string> outputStreamerNames = outputStreamersJson.get<vector<string>>();
-                    for (auto& outputStreamerLocation : outputStreamerNames)
+                    if (outputStreamerJson.is_object())
                     {
-                        ISpikeOutput* proxy { nullptr };
+                        string outputStreamerLocation { "" };
+                        if (outputStreamerJson.contains("Location"))
+                        {
+                            const json& locationJson = outputStreamerJson["Location"];
+                            if (locationJson.is_string())
+                            {
+                                outputStreamerLocation = locationJson.get<string>();
+                            }
+                        }
+
+                        string outputStreamerConnectionString { "" };
+                        if (outputStreamerJson.contains("ConnectionString"))
+                        {
+                            const json& connectionStringJson = outputStreamerJson["ConnectionString"];
+                            if (connectionStringJson.is_string())
+                                outputStreamerConnectionString = connectionStringJson.get<string>();
+                        }
+
                         if (!outputStreamerLocation.empty())
                         {
                             cout << "Creating output streamer proxy " << outputStreamerLocation << "\n";
                             auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
                             proxy->CreateProxy(context_);
-                            spikeOutputs_.push_back(std::move(proxy));
+
+                            cout << "Connecting output streamer " << outputStreamerLocation << " to '" << outputStreamerConnectionString << "'\n";
+                            if (proxy->Connect(outputStreamerConnectionString))
+                                spikeOutputs_.push_back(std::move(proxy));
+                            else
+                                cout << "Unable to connect to output streamer " << outputStreamerLocation << "\n";
                         }
                     }
                 }
             }
+
+            cout << "Created " << spikeOutputs_.size() << " spike output proxy objects\n";
         }
     };
 }

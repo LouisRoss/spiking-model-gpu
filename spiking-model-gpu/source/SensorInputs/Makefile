@@ -17,10 +17,10 @@ LDIR=../../lib
 LIBS= -ldl -lhdf5_serial -ltbb
 
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SpikeSignalProtocol.h 
 DEPS = $(patsubst %,$(ILDIR)/%,$(_DEPS))
 
-_SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h  SensorSonataFile.h
+_SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h  SensorSonataFile.h 
 SENSORINPUTDEPS = $(patsubst %,$(ILDIR)/SensorInputs/%,$(_SENSORINPUTDEPS))
 
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h

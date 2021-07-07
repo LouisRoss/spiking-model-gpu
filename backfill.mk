@@ -17,7 +17,7 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
@@ -26,11 +26,11 @@ MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
 _MODELSENSORS = ISensorInput.h SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h SensorSonataFile.h 
 MODELSENSORS = $(patsubst %,$(COREDIR)/include/SensorInputs/%,$(_MODELSENSORS))
 
-_MODELOUTUTS = ISpikeOutput.h SpikeOutputRecord.h SpikeOutputSocket.h 
-MODELOUTUTS = $(patsubst %,$(COREDIR)/include/SpikeOutputs/%,$(_MODELOUTUTS))
+_MODELOUTPUTS = ISpikeOutput.h SpikeOutputRecord.h SpikeOutputSocket.h 
+MODELOUTPUTS = $(patsubst %,$(COREDIR)/include/SpikeOutputs/%,$(_MODELOUTPUTS))
 
 
-all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) 
+all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) $(MODELOUTPUTS)
 .PHONY: all
 
 # All files in the config folder
@@ -156,6 +156,9 @@ $(COREDIR)/include/SensorInputProxy.h: spiking-model-gpu/include/SensorInputProx
 $(COREDIR)/include/SpikeOutputProxy.h: spiking-model-gpu/include/SpikeOutputProxy.h
 	cp spiking-model-gpu/include/SpikeOutputProxy.h $(COREDIR)/include/
 
+$(COREDIR)/include/SpikeSignalProtocol.h: spiking-model-gpu/include/SpikeSignalProtocol.h
+	cp spiking-model-gpu/include/SpikeSignalProtocol.h $(COREDIR)/include/
+
 # All files from the include/Initializers folder
 $(COREDIR)/include/Initializers/IModelInitializer.h: spiking-model-gpu/include/Initializers/IModelInitializer.h
 	cp spiking-model-gpu/include/Initializers/IModelInitializer.h $(COREDIR)/include/Initializers/
@@ -209,3 +212,4 @@ $(COREDIR)/include/SpikeOutputs/SpikeOutputRecord.h: spiking-model-gpu/include/S
 
 $(COREDIR)/include/SpikeOutputs/SpikeOutputSocket.h: spiking-model-gpu/include/SpikeOutputs/SpikeOutputSocket.h
 	cp spiking-model-gpu/include/SpikeOutputs/SpikeOutputSocket.h $(COREDIR)/include/SpikeOutputs/
+

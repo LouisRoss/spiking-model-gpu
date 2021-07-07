@@ -21,7 +21,9 @@ spiking-model-gpu/include/CommandControlListenSocket.h
 spiking-model-gpu/include/CommandControlConsoleUi.h
 spiking-model-gpu/include/NeuronRecordCommon.h
 spiking-model-gpu/include/Recorder.h
+spiking-model-gpu/include/SpikeSignalProtocol.h
 spiking-model-gpu/include/SensorInputProxy.h
+spiking-model-gpu/include/SpikeOutputProxy.h
 spiking-model-gpu/include/Initializers/*
 spiking-model-gpu/include/SensorInputs/*
 spiking-model-gpu/include/SpikeOutputs/*

@@ -69,8 +69,11 @@ namespace embeddedpenguins::core::neuron::model
             if (spikeOutput_ && valid_)
             {
                 isInterestedInSpikeTime_ = spikeOutput_->IsInterestedIn(NeuronRecordType::Spike);
+                cout << "Spike output " << spikeOutputSharedLibraryPath_ << (isInterestedInSpikeTime_ ? " is" : " is not") << " interested in spike-time signals\n";
                 isInterestedInRefractoryTime_ = spikeOutput_->IsInterestedIn(NeuronRecordType::Refractory);
+                cout << "Spike output " << spikeOutputSharedLibraryPath_ << (isInterestedInRefractoryTime_ ? " is" : " is not") << " interested in refractory-time signals\n";
                 isInterestedInRecentTime_ = spikeOutput_->IsInterestedIn(NeuronRecordType::Decay);
+                cout << "Spike output " << spikeOutputSharedLibraryPath_ << (isInterestedInRecentTime_ ? " is" : " is not") << " interested in decay-time signals\n";
             }
         }
 
@@ -162,12 +165,15 @@ namespace embeddedpenguins::core::neuron::model
             {
                 case NeuronRecordType::Spike:
                     if (!isInterestedInSpikeTime_) return;
+                    break;
 
                 case NeuronRecordType::Refractory:
                     if (!isInterestedInRefractoryTime_) return;
+                    break;
                     
                 case NeuronRecordType::Decay:
                     if (!isInterestedInRecentTime_) return;
+                    break;
                     
                 default:
                     break;
@@ -191,6 +197,33 @@ namespace embeddedpenguins::core::neuron::model
             {
                 std::ostringstream os;
                 os << "Error calling StreamOutput(): invalid spike output library " 
+                    << spikeOutputSharedLibraryPath_;
+                errorReason_ = os.str();
+            }
+        }
+
+        virtual void Flush() override
+        {
+            errorReason_.clear();
+
+            if (spikeOutput_ && valid_)
+            {
+                spikeOutput_->Flush();
+                return;
+            }
+
+            if (!spikeOutput_)
+            {
+                std::ostringstream os;
+                os << "Error calling Flush(): spike output library " 
+                    << spikeOutputSharedLibraryPath_ << " not loaded";
+                errorReason_ = os.str();
+            }
+
+            if (!valid_)
+            {
+                std::ostringstream os;
+                os << "Error calling Flush(): invalid spike output library " 
                     << spikeOutputSharedLibraryPath_;
                 errorReason_ = os.str();
             }
