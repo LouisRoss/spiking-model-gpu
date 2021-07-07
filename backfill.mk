@@ -14,20 +14,23 @@ COREDIR=../spiking-model-core
 _CORECONFIGS = a1.json bmtk1.json l1.json Anticipate/Anticipate.json Anticipate/I1-I2-N1-N2.json BMTK1/bmtk.json BMTK1/2-5.json Layer/Layer.json Layer/Layer1-5.json
 CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 
-_COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py 
+_COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h Performance.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h 
 MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
 
-_MODELSENSORS = ISensorInput.h SensorInputFile.h SensorSonataFile.h 
+_MODELSENSORS = ISensorInput.h SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h SensorSonataFile.h 
 MODELSENSORS = $(patsubst %,$(COREDIR)/include/SensorInputs/%,$(_MODELSENSORS))
 
+_MODELOUTPUTS = ISpikeOutput.h SpikeOutputRecord.h SpikeOutputSocket.h 
+MODELOUTPUTS = $(patsubst %,$(COREDIR)/include/SpikeOutputs/%,$(_MODELOUTPUTS))
 
-all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) 
+
+all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) $(MODELOUTPUTS)
 .PHONY: all
 
 # All files in the config folder
@@ -60,40 +63,43 @@ $(COREDIR)/config/Layer/Layer1-5.json: spiking-model-gpu//config/Layer/Layer1-5.
 
 # All files in the ui folder
 $(COREDIR)/ui/Makefile: spiking-model-gpu//ui/Makefile
-	cp spiking-model-gpu//ui/Makefile $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/Makefile $(COREDIR)/ui/
 
 $(COREDIR)/ui/mec.py: spiking-model-gpu//ui/mec.py
-	cp spiking-model-gpu//ui/mec.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/mec.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/mem.py: spiking-model-gpu//ui/mem.py
-	cp spiking-model-gpu//ui/mem.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/mem.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/mes.py: spiking-model-gpu//ui/mes.py
-	cp spiking-model-gpu//ui/mes.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/mes.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/mev.py: spiking-model-gpu//ui/mev.py
-	cp spiking-model-gpu//ui/mev.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/mev.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nnclean.py: spiking-model-gpu//ui/nnclean.py
-	cp spiking-model-gpu//ui/nnclean.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nnclean.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nngenanticipate.py: spiking-model-gpu//ui/nngenanticipate.py
-	cp spiking-model-gpu//ui/nngenanticipate.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nngenanticipate.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nngenlayer.py: spiking-model-gpu//ui/nngenlayer.py
-	cp spiking-model-gpu//ui/nngenlayer.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nngenlayer.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nnplot.py: spiking-model-gpu//ui/nnplot.py
-	cp spiking-model-gpu//ui/nnplot.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nnplot.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nn.py: spiking-model-gpu//ui/nn.py
-	cp spiking-model-gpu//ui/nn.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nn.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nntidy.py: spiking-model-gpu//ui/nntidy.py
-	cp spiking-model-gpu//ui/nntidy.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/nntidy.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/np.py: spiking-model-gpu//ui/np.py
-	cp spiking-model-gpu//ui/np.py $(COREDIR)/ui/
+	cp spiking-model-gpu/ui/np.py $(COREDIR)/ui/
+
+$(COREDIR)/ui/ns.py: spiking-model-gpu//ui/ns.py
+	cp spiking-model-gpu/ui/ns.py $(COREDIR)/ui/
 
 
 ### Reverse the path of files obtained through modelengine/add-dependencies
@@ -132,6 +138,9 @@ $(COREDIR)/include/CommandControlHandler.h: spiking-model-gpu/include/CommandCon
 $(COREDIR)/include/Performance.h: spiking-model-gpu/include/Performance.h
 	cp spiking-model-gpu/include/Performance.h $(COREDIR)/include/
 
+$(COREDIR)/include/WorkerThread.h: spiking-model-gpu/include/WorkerThread.h
+	cp spiking-model-gpu/include/WorkerThread.h $(COREDIR)/include/
+
 $(COREDIR)/include/IModelRunner.h: spiking-model-gpu/include/IModelRunner.h
 	cp spiking-model-gpu/include/IModelRunner.h $(COREDIR)/include/
 
@@ -143,6 +152,12 @@ $(COREDIR)/include/Recorder.h: spiking-model-gpu/include/Recorder.h
 
 $(COREDIR)/include/SensorInputProxy.h: spiking-model-gpu/include/SensorInputProxy.h
 	cp spiking-model-gpu/include/SensorInputProxy.h $(COREDIR)/include/
+
+$(COREDIR)/include/SpikeOutputProxy.h: spiking-model-gpu/include/SpikeOutputProxy.h
+	cp spiking-model-gpu/include/SpikeOutputProxy.h $(COREDIR)/include/
+
+$(COREDIR)/include/SpikeSignalProtocol.h: spiking-model-gpu/include/SpikeSignalProtocol.h
+	cp spiking-model-gpu/include/SpikeSignalProtocol.h $(COREDIR)/include/
 
 # All files from the include/Initializers folder
 $(COREDIR)/include/Initializers/IModelInitializer.h: spiking-model-gpu/include/Initializers/IModelInitializer.h
@@ -176,5 +191,25 @@ $(COREDIR)/include/SensorInputs/ISensorInput.h: spiking-model-gpu/include/Sensor
 $(COREDIR)/include/SensorInputs/SensorInputFile.h: spiking-model-gpu/include/SensorInputs/SensorInputFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorInputFile.h $(COREDIR)/include/SensorInputs/
 
+$(COREDIR)/include/SensorInputs/SensorInputSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputSocket.h $(COREDIR)/include/SensorInputs/
+
+$(COREDIR)/include/SensorInputs/SensorInputListenSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h $(COREDIR)/include/SensorInputs/
+
+$(COREDIR)/include/SensorInputs/SensorInputDataSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h $(COREDIR)/include/SensorInputs/
+
 $(COREDIR)/include/SensorInputs/SensorSonataFile.h: spiking-model-gpu/include/SensorInputs/SensorSonataFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorSonataFile.h $(COREDIR)/include/SensorInputs/
+
+# All files from the include/SpikeOutputs folder
+$(COREDIR)/include/SpikeOutputs/ISpikeOutput.h: spiking-model-gpu/include/SpikeOutputs/ISpikeOutput.h
+	cp spiking-model-gpu/include/SpikeOutputs/ISpikeOutput.h $(COREDIR)/include/SpikeOutputs/
+
+$(COREDIR)/include/SpikeOutputs/SpikeOutputRecord.h: spiking-model-gpu/include/SpikeOutputs/SpikeOutputRecord.h
+	cp spiking-model-gpu/include/SpikeOutputs/SpikeOutputRecord.h $(COREDIR)/include/SpikeOutputs/
+
+$(COREDIR)/include/SpikeOutputs/SpikeOutputSocket.h: spiking-model-gpu/include/SpikeOutputs/SpikeOutputSocket.h
+	cp spiking-model-gpu/include/SpikeOutputs/SpikeOutputSocket.h $(COREDIR)/include/SpikeOutputs/
+

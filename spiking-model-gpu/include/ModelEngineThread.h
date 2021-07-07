@@ -43,6 +43,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::Log;
     using embeddedpenguins::core::neuron::model::Recorder;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
+    using embeddedpenguins::core::neuron::model::WorkerThread;
 
     //
     // The model engine does its work in this thread object.
@@ -55,8 +56,8 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class ModelEngineThread
     {
-        ModelEngineContext<RECORDTYPE>& context_;
-        GpuModelHelper<RECORDTYPE>& helper_;
+        ModelEngineContext& context_;
+        GpuModelHelper& helper_;
 
         time_point nextScheduledTick_;
         WorkerInputStreamer<RECORDTYPE> inputStreamer_;
@@ -65,8 +66,8 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngineThread() = delete;
         ModelEngineThread(
-                        ModelEngineContext<RECORDTYPE>& context, 
-                        GpuModelHelper<RECORDTYPE>& helper) :
+                        ModelEngineContext& context, 
+                        GpuModelHelper& helper) :
             context_(context),
             helper_(helper),
             nextScheduledTick_(high_resolution_clock::now() + context_.EnginePeriod),
@@ -96,12 +97,8 @@ namespace embeddedpenguins::gpu::neuron::model
                 context_.Run = false;
 
                 Log::Merge(context_.Logger);
-                Recorder<NeuronRecord>::Merge(context_.Record);
                 cout << "Writing log file to " << context_.LogFile << "... " << std::flush;
                 Log::Print(context_.LogFile.c_str());
-                cout << "Done\n";
-                cout << "Writing record file to " << context_.RecordFile << "... " << std::flush;
-                Recorder<NeuronRecord>::Print(context_.RecordFile.c_str());
                 cout << "Done\n";
             } while (context_.Run);
         }
@@ -114,9 +111,9 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
-            if (!context_.Helper.AllocateModel())
+            if (!helper_.AllocateModel())
             {
-                cout << "ModelEngineThread.Initialize failed at context_.Helper.AllocateModel()\n";
+                cout << "ModelEngineThread.Initialize failed at helper_.AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
@@ -162,8 +159,8 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             long long int engineElapsed;
 
-            WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE> inputStreamThread(inputStreamer_);
-            WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE> outputStreamThread(outputStreamer_);
+            WorkerThread<WorkerInputStreamer<RECORDTYPE>> inputStreamThread(inputStreamer_);
+            WorkerThread<WorkerOutputStreamer<RECORDTYPE>> outputStreamThread(outputStreamer_);
 
             auto quit {false};
             do
@@ -237,8 +234,8 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
             // Create the proxy with a two-step ctor-create sequence.
-            ModelInitializerProxy<GpuModelHelper<RECORDTYPE>> initializer(modelInitializerLocation);
-            initializer.CreateProxy(context_.Helper);
+            ModelInitializerProxy<GpuModelHelper> initializer(modelInitializerLocation);
+            initializer.CreateProxy(helper_);
 
             // Let the initializer initialize the model's static state.
             initializer.Initialize();
@@ -246,8 +243,8 @@ namespace embeddedpenguins::gpu::neuron::model
             return true;
         }
 
-        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>, RECORDTYPE>& inputStreamThread,
-                WorkerThread<WorkerOutputStreamer<RECORDTYPE>, RECORDTYPE>& outputStreamThread)
+        void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,
+                WorkerThread<WorkerOutputStreamer<RECORDTYPE>>& outputStreamThread)
         {
             // Get input for this tick, copy input to device.
 #ifndef NOLOG

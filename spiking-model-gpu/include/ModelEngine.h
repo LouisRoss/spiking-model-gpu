@@ -27,7 +27,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class ModelEngine
     {
-        ModelEngineContext<RECORDTYPE> context_;
+        ModelEngineContext context_;
         thread workerThread_;
         nanoseconds duration_ {};
         time_point startTime_ {};
@@ -42,15 +42,15 @@ namespace embeddedpenguins::gpu::neuron::model
         //void RecordFile(const string& recordfile) { context_.RecordFile = recordfile; }
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
-        ModelEngineContext<RECORDTYPE>& Context() { return context_; }
+        ModelEngineContext& Context() { return context_; }
         void Pause() { context_.Pause = true; }
         void Continue() { context_.Pause = false; }
 
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, GpuModelHelper<RECORDTYPE>& helper) :
-            context_(configuration, helper)
+        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, GpuModelHelper& helper) :
+            context_(configuration/*, helper*/)
         {
             workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, helper));
         }

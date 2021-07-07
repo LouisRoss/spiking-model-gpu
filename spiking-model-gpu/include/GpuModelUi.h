@@ -10,7 +10,7 @@ namespace embeddedpenguins::gpu::neuron::model
 {
     using embeddedpenguins::core::neuron::model::CommandControlConsoleUi;
 
-    class GpuModelUi : public CommandControlConsoleUi<ModelRunner<NeuronRecord>, GpuModelHelper<NeuronRecord>>
+    class GpuModelUi : public CommandControlConsoleUi<ModelRunner<NeuronRecord>, GpuModelHelper>
     {
         string legend_ {};
 
