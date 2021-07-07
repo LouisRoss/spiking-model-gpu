@@ -10,7 +10,9 @@ spiking-model-gpu/source/SensorInputs/*so
 spiking-model-gpu/source/SensorInputs/obj/*
 spiking-model-gpu/source/SpikeOutputs/*so
 spiking-model-gpu/source/SpikeOutputs/obj/*
-spiking-model-gpu/source/libsocket/*
+spiking-model-gpu/source/libsocket/C/*
+spiking-model-gpu/source/libsocket/C++/*
+spiking-model-gpu/source/libsocket/obj/*
 include/*
 spiking-model-gpu/include/ConfigurationRepository.h
 spiking-model-gpu/include/KeyListener.h
