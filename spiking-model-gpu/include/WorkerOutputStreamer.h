@@ -5,8 +5,8 @@
 
 #include "SpikeOutputProxy.h"
 
+#include "IModelHelper.h"
 #include "ModelEngineContext.h"
-#include "GpuModelHelper.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -29,14 +29,14 @@ namespace embeddedpenguins::gpu::neuron::model
     {
         ModelEngineContext& context_;
         vector<unique_ptr<ISpikeOutput>> spikeOutputs_ {};
-        GpuModelHelper& helper_;
+        IModelHelper* helper_;
         bool valid_;
 
     public:
         const bool Valid() const { return valid_; }
 
     public:
-        WorkerOutputStreamer(ModelEngineContext& context, GpuModelHelper& helper) :
+        WorkerOutputStreamer(ModelEngineContext& context, IModelHelper* helper) :
             context_(context),
             helper_(helper),
             valid_(true)
@@ -46,7 +46,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void Process()
         {
-            auto relevantNeurons = helper_.CollectRelevantNeurons();
+            auto relevantNeurons = helper_->CollectRelevantNeurons();
             for (auto [index, activation, type] : relevantNeurons)
             {
                 for (auto& spikeOutput : spikeOutputs_)
@@ -60,7 +60,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 spikeOutput->Flush();
             }
 
-            //helper_.PrintMonitoredNeurons();
+            //helper_->PrintMonitoredNeurons();
         }
 
     private:

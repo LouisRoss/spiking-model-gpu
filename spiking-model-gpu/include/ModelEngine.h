@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 
+#include "IModelHelper.h"
 #include "ConfigurationRepository.h"
 #include "ModelEngineContext.h"
 #include "ModelEngineThread.h"
@@ -49,10 +50,10 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, GpuModelHelper& helper) :
+        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, IModelHelper* helper) :
             context_(configuration/*, helper*/)
         {
-            workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, helper));
+            workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, carrier, helper));
         }
 
         ~ModelEngine()

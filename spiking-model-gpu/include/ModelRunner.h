@@ -14,6 +14,7 @@
 #include "ModelInitializerProxy.h"
 
 #include "IModelRunner.h"
+#include "IModelHelper.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
 #include "ModelEngine.h"
@@ -61,7 +62,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         ConfigurationRepository configuration_ {};
         GpuModelCarrier carrier_ {};
-        GpuModelHelper helper_;
+        unique_ptr<IModelHelper> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
         unique_ptr<IQueryHandler> queryHandler_ {};
@@ -78,7 +79,8 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
         virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
         ModelEngineContext& Context() const { return modelEngine_->Context(); }
-        GpuModelHelper& Helper() { return helper_; }
+        IModelHelper* Helper() { return helper_.get(); }
+        GpuModelCarrier& Carrier() { return carrier_; }
 
     public:
         //
@@ -97,15 +99,20 @@ namespace embeddedpenguins::gpu::neuron::model
         //    * WaitForQuit()
         //
         ModelRunner() :
-            helper_(carrier_, configuration_)
+            helper_(std::move(GenerateModelHelper()))
         {
             queryHandler_ = std::move(make_unique<CommandControlHandler<RECORDTYPE>>(*this));
         }
 
         ModelRunner(unique_ptr<IQueryHandler> queryHandler) :
-            helper_(carrier_, configuration_),
+            helper_(std::move(GenerateModelHelper())),
             queryHandler_(std::move(queryHandler))
         {
+        }
+
+        unique_ptr<IModelHelper> GenerateModelHelper()
+        {
+            return std::move(make_unique<GpuModelHelper>(carrier_, configuration_));
         }
 
         //
@@ -371,7 +378,7 @@ namespace embeddedpenguins::gpu::neuron::model
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
                 carrier_, 
                 configuration_,
-                helper_);
+                helper_.get());
 
             return modelEngine_->Initialize();
         }

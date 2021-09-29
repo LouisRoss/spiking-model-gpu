@@ -10,7 +10,7 @@ namespace embeddedpenguins::gpu::neuron::model
 {
     using embeddedpenguins::core::neuron::model::CommandControlConsoleUi;
 
-    class GpuModelUi : public CommandControlConsoleUi<ModelRunner<NeuronRecord>, GpuModelHelper>
+    class GpuModelUi : public CommandControlConsoleUi<ModelRunner<NeuronRecord>>
     {
         string legend_ {};
 
@@ -23,9 +23,9 @@ namespace embeddedpenguins::gpu::neuron::model
 
         virtual char EmitToken(unsigned long neuronIndex) override
         {
-            if (neuronIndex >= helper_.Carrier().ModelSize()) return '=';
+            if (neuronIndex >= modelRunner_.Carrier().ModelSize()) return '=';
             
-            auto activation = helper_.GetNeuronActivation(neuronIndex);
+            auto activation = helper_->GetNeuronActivation(neuronIndex);
             return MapIntensity(activation);
         }
 

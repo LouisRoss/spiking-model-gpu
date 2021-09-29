@@ -18,8 +18,8 @@
 #include "WorkerOutputStreamer.h"
 #include "WorkerThread.h"
 
+#include "IModelHelper.h"
 #include "ModelEngineContext.h"
-#include "GpuModelHelper.h"
 #include "GpuModelCarrier.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -57,7 +57,8 @@ namespace embeddedpenguins::gpu::neuron::model
     class ModelEngineThread
     {
         ModelEngineContext& context_;
-        GpuModelHelper& helper_;
+        GpuModelCarrier& carrier_;
+        IModelHelper* helper_;
 
         time_point nextScheduledTick_;
         WorkerInputStreamer<RECORDTYPE> inputStreamer_;
@@ -67,8 +68,10 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelEngineThread() = delete;
         ModelEngineThread(
                         ModelEngineContext& context, 
-                        GpuModelHelper& helper) :
+                        GpuModelCarrier& carrier,
+                        IModelHelper* helper) :
             context_(context),
+            carrier_(carrier),
             helper_(helper),
             nextScheduledTick_(high_resolution_clock::now() + context_.EnginePeriod),
             inputStreamer_(context_),
@@ -111,9 +114,9 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
-            if (!helper_.AllocateModel())
+            if (!helper_->AllocateModel())
             {
-                cout << "ModelEngineThread.Initialize failed at helper_.AllocateModel()\n";
+                cout << "ModelEngineThread.Initialize failed at helper_->AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
@@ -125,10 +128,10 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
-            cuda::memory::copy(helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().NeuronsHost.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
-            cuda::memory::copy(helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().SynapsesHost.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+            cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.SynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
 
-            DeviceFixupShim(helper_.Carrier().Device, helper_.Carrier().ModelSize(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().SynapsesDevice.get());
+            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get());
 
             if (!inputStreamer_.Valid())
             {
@@ -234,7 +237,7 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
             // Create the proxy with a two-step ctor-create sequence.
-            ModelInitializerProxy<GpuModelHelper> initializer(modelInitializerLocation);
+            ModelInitializerProxy initializer(modelInitializerLocation);
             initializer.CreateProxy(helper_);
 
             // Let the initializer initialize the model's static state.
@@ -254,13 +257,13 @@ namespace embeddedpenguins::gpu::neuron::model
             inputStreamThread.WaitForPreviousScan();
             auto& streamedInput = inputStreamer_.StreamedInput();
 #ifdef STREAM_CPU
-            helper_.SpikeInputNeurons(streamedInput, context_.Record);
-            cuda::memory::copy(helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().NeuronsHost.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
+            helper_->SpikeInputNeurons(streamedInput, context_.Record);
+            cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
 #else
             if (!streamedInput.empty())
             {
-                cuda::memory::copy(helper_.Carrier().InputSignalsDevice.get(), &streamedInput[0], streamedInput.size() * sizeof(unsigned long long));
-                StreamInputShim(helper_.Carrier().Device, helper_.Carrier().ModelSize(), streamedInput.size(), helper_.Carrier().InputSignalsDevice.get());
+                cuda::memory::copy(carrier_.InputSignalsDevice.get(), &streamedInput[0], streamedInput.size() * sizeof(unsigned long long));
+                StreamInputShim(carrier_.Device, carrier_.ModelSize(), streamedInput.size(), carrier_.InputSignalsDevice.get());
             }
 #endif
             inputStreamThread.Scan();
@@ -270,24 +273,24 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "  ModelEngine calling synapse kernel\n";
             context_.Logger.Logit();
 #endif
-            ModelSynapsesShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
+            ModelSynapsesShim(carrier_.Device, carrier_.ModelSize());
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine calling timer kernel\n";
             context_.Logger.Logit();
 #endif
-            ModelTimersShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
+            ModelTimersShim(carrier_.Device, carrier_.ModelSize());
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine calling plasticity kernel\n";
             context_.Logger.Logit();
 #endif
-            ModelPlasticityShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
+            ModelPlasticityShim(carrier_.Device, carrier_.ModelSize());
 
             // Advance all ticks in the model.
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine calling tick kernel\n";
             context_.Logger.Logit();
 #endif
-            ModelTickShim(helper_.Carrier().Device, helper_.Carrier().ModelSize());
+            ModelTickShim(carrier_.Device, carrier_.ModelSize());
             ++context_.Iterations;
 
             // Copy device to host, capture output.
@@ -296,8 +299,8 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logit();
 #endif
             outputStreamThread.WaitForPreviousScan();
-            cuda::memory::copy(helper_.Carrier().NeuronsHost.get(), helper_.Carrier().NeuronsDevice.get(), helper_.Carrier().ModelSize() * sizeof(NeuronNode));
-            //cuda::memory::copy(helper_.Carrier().SynapsesHost.get(), helper_.Carrier().SynapsesDevice.get(), helper_.Carrier().ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
+            //cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
             outputStreamThread.Scan();
         }
 

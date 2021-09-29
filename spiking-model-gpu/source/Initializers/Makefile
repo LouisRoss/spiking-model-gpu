@@ -320,7 +320,7 @@ ILDIR=../../../include
 _DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
+_INITIALIZERDEPS = IModelInitializer.h ModelPackageInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
 INITIALIZERDEPS = $(patsubst %,$(IDIR)/Initializers/%,$(_INITIALIZERDEPS))
 
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h
@@ -335,7 +335,7 @@ DEBUGFLAG=
 # Target rules
 all: build
 
-build: ModelAnticipateInitializer.so ModelLayerInitializer.so ModelSonataInitializer.so
+build: ModelPackageInitializer.so ModelAnticipateInitializer.so ModelLayerInitializer.so ModelSonataInitializer.so
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -347,6 +347,15 @@ endif
 $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
 	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
+
+$(ODIR)/ModelPackageInitializer.o: ModelPackageInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+	$(EXEC) mkdir -p $(ODIR)
+	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
+
+ModelPackageInitializer.so: $(ODIR)/ModelPackageInitializer.o
+	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
+	$(EXEC) mkdir -p $(BDIR)
+	$(EXEC) cp $@ $(BDIR)
 
 $(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
@@ -383,6 +392,7 @@ debug:
 .PHONY: debug
 
 clean:
+	rm -f $(ODIR)/ModelPackageInitializer.o
 	rm -f $(ODIR)/ModelAnticipateInitializer.o
 	rm -rf $(BDIR)/ModelAnticipateInitializer.so
 

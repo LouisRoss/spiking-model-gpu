@@ -1,22 +1,22 @@
 #include "ConfigurationRepository.h"
 #include "Initializers/ModelSonataInitializer.h"
 
-#include "GpuModelHelper.h"
+#include "IModelHelper.h"
 #include "NeuronRecord.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    using embeddedpenguins::core::neuron::model::IModelHelper;
     using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::ModelSonataInitializer;
-    using embeddedpenguins::core::neuron::model::ConfigurationRepository;
 
     // the class factories
 
-    extern "C" IModelInitializer<GpuModelHelper>* create(GpuModelHelper& helper) {
-        return new ModelSonataInitializer<GpuModelHelper>(helper);
+    extern "C" IModelInitializer* create(IModelHelper* helper) {
+        return new ModelSonataInitializer(helper);
     }
 
-    extern "C" void destroy(IModelInitializer<GpuModelHelper>* p) {
+    extern "C" void destroy(IModelInitializer* p) {
         delete p;
     }
 }

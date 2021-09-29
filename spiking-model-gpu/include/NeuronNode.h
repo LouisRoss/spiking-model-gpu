@@ -1,14 +1,11 @@
 #pragma once
 
 #include "NeuronCommon.h"
+#include "NeuronRecordCommon.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
-    enum class NeuronType : char
-    {
-        Excitatory,
-        Inhibitory
-    };
+    using embeddedpenguins::core::neuron::model::NeuronType;
 
     struct NeuronNode
     {
