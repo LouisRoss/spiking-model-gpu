@@ -3,7 +3,6 @@
         {
             "name": "C/C++: g++ build active file",
             "includePath": [
-                "/usr/include/linux",
                 "/usr/include/c++/9/**",
                 "${workspaceFolder}/include",
                 "${workspaceFolder}/spiking-model-gpu/source",
@@ -16,7 +15,7 @@
             "compilerPath": "/usr/bin/g++",
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "gcc-x64",
+            "intelliSenseMode": "linux-gcc-x64",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
