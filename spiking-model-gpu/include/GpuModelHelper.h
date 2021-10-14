@@ -45,8 +45,11 @@ namespace embeddedpenguins::gpu::neuron::model
         {
         }
 
-        // IModelHelper<GpuModelCarrier> implementation
+        // IModelHelper implementation
         virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
+        virtual const unsigned long int NeuronCount() const override { return carrier_.NeuronCount; }
+        virtual const unsigned int ExpansionCount() const override { return carrier_.ExpansionCount; }
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
 

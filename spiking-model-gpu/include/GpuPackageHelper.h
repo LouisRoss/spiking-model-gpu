@@ -1,15 +1,19 @@
 #pragma once
 
 #include <iostream>
-#include <algorithm>
 #include <vector>
+#include <string>
 #include <tuple>
 #include <memory>
+
+#include "libsocket/exception.hpp"
+#include "libsocket/inetclientstream.hpp"
 
 #include "nlohmann/json.hpp"
 
 #include "ConfigurationRepository.h"
 #include "NeuronRecordCommon.h"
+#include "Initializers/PackageInitializerDataSocket.h"
 
 #include "GpuModelCarrier.h"
 
@@ -18,16 +22,17 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::cout;
     using std::max_element;
     using std::vector;
+    using std::string;
     using std::tuple;
     using std::unique_ptr;
 
     using nlohmann::json;
 
-    using embeddedpenguins::core::neuron::model::NeuronRecordType;
-
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::NeuronRecordType;
+    using embeddedpenguins::core::neuron::model::PackageInitializerDataSocket;
 
-    class GpuPackageHelper
+    class GpuPackageHelper : public IModelHelper
     {
         GpuModelCarrier& carrier_;
         const ConfigurationRepository& configuration_;
@@ -43,16 +48,19 @@ namespace embeddedpenguins::gpu::neuron::model
         {
         }
 
-        GpuModelCarrier& Carrier() { return carrier_; }
-        const json& Configuration() const { return configuration_.Configuration(); }
-        const unsigned int Width() const { return width_; }
-        const unsigned int Height() const { return height_; }
+        // IModelHelper implementation
+        virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
+        virtual const unsigned long int NeuronCount() const override { return carrier_.NeuronCount; }
+        virtual const unsigned int ExpansionCount() const override { return carrier_.ExpansionCount; }
+        virtual const unsigned int Width() const override { return width_; }
+        virtual const unsigned int Height() const override { return height_; }
 
         //
         // Unpack needed parameters from the configuration and allocate
         // both CPU and GPU memory necessary to contain the model.
         //
-        bool AllocateModel(unsigned long int modelSize = 0)
+        virtual bool AllocateModel(unsigned long int modelSize = 0) override
         {
             if (!CreateModel(modelSize))
             {
@@ -63,7 +71,7 @@ namespace embeddedpenguins::gpu::neuron::model
             return true;
         }
 
-        bool InitializeModel()
+        virtual bool InitializeModel() override
         {
             if (!carrier_.Valid)
             {
@@ -92,35 +100,35 @@ namespace embeddedpenguins::gpu::neuron::model
             return true;
         }
 
-        unsigned long long int GetIndex(const int row, const int column) const
+        virtual unsigned long long int GetIndex(const int row, const int column) const override
         {
             return row * width_ + column;
         }
 
-        unsigned long int GetNeuronTicksSinceLastSpike(const unsigned long int source)
+        virtual unsigned long int GetNeuronTicksSinceLastSpike(const unsigned long int source) override
         {
             return carrier_.NeuronsHost[source].TicksSinceLastSpike;
         }
 
-        bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId)
+        virtual bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId) override
         {
             auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
             return ((unsigned long int*)synapsesForNeuron[synapseId].PresynapticNeuron) != 0;
         }
 
-        int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId)
+        virtual int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId) override
         {
             auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
             return synapsesForNeuron[synapseId].Strength;
         }
 
-        unsigned long int GetPresynapticNeuron(const unsigned long int neuronIndex, const unsigned int synapseId)
+        virtual unsigned long int GetPresynapticNeuron(const unsigned long int neuronIndex, const unsigned int synapseId) override
         {
             // Only available in GPU, fake it here.
             return 0;
         }
 
-        void WireInput(unsigned long int sourceNodeIndex, int synapticWeight)
+        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight) override
         {
             if (!carrier_.Valid)
             {
@@ -138,7 +146,7 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.RequiredPostsynapticConnections[sourceNodeIndex]++;
         }
 
-        void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight)
+        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight) override
         {
             if (!carrier_.Valid)
             {
@@ -160,22 +168,22 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;
         }
 
-        NeuronType GetNeuronType(const unsigned long int source) const
+        virtual NeuronType GetNeuronType(const unsigned long int source) const override
         {
             return carrier_.NeuronsHost[source].Type;
         }
 
-        short GetNeuronActivation(const unsigned long int source) const
+        virtual short GetNeuronActivation(const unsigned long int source) const override
         {
             return carrier_.NeuronsHost[source].Activation;
         }
 
-        void SetExcitatoryNeuronType(const unsigned long int source)
+        virtual void SetExcitatoryNeuronType(const unsigned long int source) override
         {
             carrier_.NeuronsHost[source].Type = NeuronType::Excitatory;
         }
 
-        void SetInhibitoryNeuronType(const unsigned long int source)
+        virtual void SetInhibitoryNeuronType(const unsigned long int source) override
         {
             carrier_.NeuronsHost[source].Type = NeuronType::Inhibitory;
         }
@@ -208,7 +216,7 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 #endif
 
-        vector<tuple<unsigned long long, short int, NeuronRecordType>> CollectRelevantNeurons()
+        virtual vector<tuple<unsigned long long, short int, NeuronRecordType>> CollectRelevantNeurons() override
         {
             vector<tuple<unsigned long long, short int, NeuronRecordType>> relevantNeurons;
 
@@ -240,7 +248,7 @@ namespace embeddedpenguins::gpu::neuron::model
             return relevantNeurons;
         }
 
-        unsigned long int FindRequiredSynapseCounts()
+        virtual unsigned long int FindRequiredSynapseCounts() override
         {
             const auto& requiredPostsynapticConnection = carrier_.RequiredPostsynapticConnections;
             auto requiredSynapseCount = *max_element(&requiredPostsynapticConnection[0], &requiredPostsynapticConnection[carrier_.ModelSize()]);
@@ -259,15 +267,19 @@ namespace embeddedpenguins::gpu::neuron::model
         bool CreateModel(unsigned long int modelSize)
         {
             auto size = modelSize;
+
             if (size == 0)
             {
-                const json& modelJson = configuration_.Configuration()["Model"];
-                if (!modelJson.is_null())
-                {
-                    const json& modelSizeJson = modelJson["ModelSize"];
-                    if (modelSizeJson.is_number_unsigned())
-                        size = modelSizeJson.get<unsigned int>();
-                }
+                PackageInitializerDataSocket socket(configuration_.StackConfiguration());
+                // TODO - develop the model name from somewhere!
+                protocol::ModelDescriptorRequest request("layer");
+
+                auto response = socket.TransactWithServer<protocol::ModelDescriptorRequest, protocol::ModelDescriptorResponse>(request);
+                auto* descriptionResponse = reinterpret_cast<protocol::ModelDescriptorResponse*>(response.get());
+                size = descriptionResponse->NeuronCount;
+                carrier_.ExpansionCount = descriptionResponse->ExpansionCount;
+
+                cout << "ModelPackageHelper retrieved model size from packager of " << size << " neurons and " << descriptionResponse->ExpansionCount << " expansions\n";
             }
 
             if (size == 0)

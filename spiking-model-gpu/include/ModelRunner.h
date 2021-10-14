@@ -17,6 +17,7 @@
 #include "IModelHelper.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
+#include "GpuPackageHelper.h"
 #include "ModelEngine.h"
 #include "ICommandControlAcceptor.h"
 #include "IQueryHandler.h"
@@ -112,7 +113,9 @@ namespace embeddedpenguins::gpu::neuron::model
 
         unique_ptr<IModelHelper> GenerateModelHelper()
         {
-            return std::move(make_unique<GpuModelHelper>(carrier_, configuration_));
+            // TODO - some configuration allows us to select the right helper.
+            //return std::move(make_unique<GpuModelHelper>(carrier_, configuration_));
+            return std::move(make_unique<GpuPackageHelper>(carrier_, configuration_));
         }
 
         //

@@ -314,17 +314,24 @@ endif
 
 ################################################################################
 CC=g++
+LIBSOCKETODIR=../libsocket/obj
+LIBSOCKETCCDIR=../libsocket/C++
+LIBSOCKETCDIR=../libsocket/C
 IDIR=../../include
 ILDIR=../../../include
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h PackageInitializerProtocol.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_INITIALIZERDEPS = IModelInitializer.h ModelPackageInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
+_INITIALIZERDEPS = IModelInitializer.h ModelPackageInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h PackageInitializerDataSocket.h
 INITIALIZERDEPS = $(patsubst %,$(IDIR)/Initializers/%,$(_INITIALIZERDEPS))
 
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h
 SONATADEPS = $(patsubst %,$(IDIR)/persistence/sonata/%,$(_SONATADEPS))
+
+_LIBSOCKETOBJS = libinetsocket.o dgramclient.o dgramoverstream.o exception.o framing.o inetbase.o inetclientdgram.o inetclientstream.o inetdgram.o inetserverdgram.o inetserverstream.o select.o socket.o streamclient.o
+LIBSOCKETOBJS = $(patsubst %,$(LIBSOCKETODIR)/%,$(_LIBSOCKETOBJS))
+
 
 LIBS= -ldl -lhdf5_serial -ltbb
 
@@ -344,6 +351,12 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
+$(LIBSOCKETODIR)/%.o: $(LIBSOCKETCCDIR)/%.cpp
+	make --directory ../libsocket/
+
+$(LIBSOCKETODIR)/libinetsocket.o: $(LIBSOCKETCDIR)/inet/libinetsocket.c
+	make --directory ../libsocket/
+
 $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
 	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
@@ -352,7 +365,7 @@ $(ODIR)/ModelPackageInitializer.o: ModelPackageInitializer.cpp $(DEPS) $(INITIAL
 	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
-ModelPackageInitializer.so: $(ODIR)/ModelPackageInitializer.o
+ModelPackageInitializer.so: $(ODIR)/ModelPackageInitializer.o  $(LIBSOCKETOBJS)
 	$(CC) --shared -o $@ $^ $(LFLAGS) $(LIBS)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)

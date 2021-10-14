@@ -17,6 +17,7 @@ namespace embeddedpenguins::gpu::neuron::model
     struct GpuModelCarrier
     {
         unsigned long int NeuronCount { };
+        unsigned int ExpansionCount { };
         cuda::device::id_t DeviceId;
         cuda::device_t Device;
 

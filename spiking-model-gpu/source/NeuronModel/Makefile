@@ -324,10 +324,10 @@ CDIR=../libsocket/C
 _LIBSOCKETOBJS = libinetsocket.o dgramclient.o dgramoverstream.o exception.o framing.o inetbase.o inetclientdgram.o inetclientstream.o inetdgram.o inetserverdgram.o inetserverstream.o select.o socket.o streamclient.o
 LIBSOCKETOBJS = $(patsubst %,$(ODIR)/%,$(_LIBSOCKETOBJS))
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuPackageHelper.h IModelHelper.h GpuModelUi.h CommandControlConsoleUi.h ICommandControlAcceptor.h IModelRunner.h QueryResponseListenSocket.h QueryResponseSocket.h IQueryHandler.h CommandControlHandler.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SensorInputProxy.h WorkerInputStreamer.h SpikeOutputProxy.h WorkerOutputStreamer.h WorkerThread.h Performance.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuPackageHelper.h IModelHelper.h GpuModelUi.h CommandControlConsoleUi.h ICommandControlAcceptor.h IModelRunner.h QueryResponseListenSocket.h QueryResponseSocket.h IQueryHandler.h CommandControlHandler.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SensorInputProxy.h WorkerInputStreamer.h SpikeOutputProxy.h WorkerOutputStreamer.h WorkerThread.h Performance.h PackageInitializerProtocol.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h
+_INITIALIZERDEPS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h PackageInitializerDataSocket.h
 INITIALIZERDEPS = $(patsubst %,$(IDIR)/Initializers/%,$(_INITIALIZERDEPS))
 
 _SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h  SensorSonataFile.h

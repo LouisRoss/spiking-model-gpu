@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
 
     try
     {
+        cout << "Calling modelRunner.Initialize()\n";
         if (!modelRunner.Initialize(argc, argv))
         {
             cout << "Cannot initialize model: " << modelRunner.Reason() << "\nstopping\n";
@@ -63,6 +64,7 @@ int main(int argc, char* argv[])
 
         if (!modelRunner.ControlFile().empty())
         {
+            cout << "Model ControlFile not empty, calling modelRunner.RunWithExistingModel()\n";
             if (!modelRunner.RunWithExistingModel())
             {
                 cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
@@ -70,6 +72,7 @@ int main(int argc, char* argv[])
             }
         }
 
+        cout << "Calling modelRunner.RunCommandControl()\n";
         modelRunner.RunCommandControl();
     } catch (libsocket::socket_exception ex)
     {
