@@ -20,7 +20,7 @@ COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 _MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
-_MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h ModelPackageInitializer.h
+_MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h ModelPackageInitializer.h PackageInitializerDataSocket.h
 MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
 
 _MODELSENSORS = ISensorInput.h SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h SensorSonataFile.h 
@@ -181,30 +181,34 @@ $(COREDIR)/include/Initializers/ModelLifeInitializer.h: spiking-model-gpu/includ
 $(COREDIR)/include/Initializers/ModelNeuronInitializer.h: spiking-model-gpu/include/Initializers/ModelNeuronInitializer.h
 	cp spiking-model-gpu/include/Initializers/ModelNeuronInitializer.h $(COREDIR)/include/Initializers/
 
+$(COREDIR)/include/Initializers/ModelPackageInitializer.h: spiking-model-gpu/include/Initializers/ModelPackageInitializer.h
+	cp spiking-model-gpu/include/Initializers/ModelPackageInitializer.h $(COREDIR)/include/Initializers/
+
 $(COREDIR)/include/Initializers/ModelSonataInitializer.h: spiking-model-gpu/include/Initializers/ModelSonataInitializer.h
 	cp spiking-model-gpu/include/Initializers/ModelSonataInitializer.h $(COREDIR)/include/Initializers/
+
+$(COREDIR)/include/Initializers/PackageInitializerDataSocket.h: spiking-model-gpu/include/Initializers/PackageInitializerDataSocket.h
+	cp spiking-model-gpu/include/Initializers/PackageInitializerDataSocket.h $(COREDIR)/include/Initializers/
 
 $(COREDIR)/include/Initializers/ParticleModelInitializer.h: spiking-model-gpu/include/Initializers/ParticleModelInitializer.h
 	cp spiking-model-gpu/include/Initializers/ParticleModelInitializer.h $(COREDIR)/include/Initializers/
 
-$(COREDIR)/include/Initializers/ModelPackageInitializer.h: spiking-model-gpu/include/Initializers/ModelPackageInitializer.h
-	cp spiking-model-gpu/include/Initializers/ModelPackageInitializer.h $(COREDIR)/include/Initializers/
 
 # All files from the include/SensorInputs folder
 $(COREDIR)/include/SensorInputs/ISensorInput.h: spiking-model-gpu/include/SensorInputs/ISensorInput.h
 	cp spiking-model-gpu/include/SensorInputs/ISensorInput.h $(COREDIR)/include/SensorInputs/
 
+$(COREDIR)/include/SensorInputs/SensorInputDataSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h $(COREDIR)/include/SensorInputs/
+
 $(COREDIR)/include/SensorInputs/SensorInputFile.h: spiking-model-gpu/include/SensorInputs/SensorInputFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorInputFile.h $(COREDIR)/include/SensorInputs/
-
-$(COREDIR)/include/SensorInputs/SensorInputSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputSocket.h
-	cp spiking-model-gpu/include/SensorInputs/SensorInputSocket.h $(COREDIR)/include/SensorInputs/
 
 $(COREDIR)/include/SensorInputs/SensorInputListenSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h
 	cp spiking-model-gpu/include/SensorInputs/SensorInputListenSocket.h $(COREDIR)/include/SensorInputs/
 
-$(COREDIR)/include/SensorInputs/SensorInputDataSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h
-	cp spiking-model-gpu/include/SensorInputs/SensorInputDataSocket.h $(COREDIR)/include/SensorInputs/
+$(COREDIR)/include/SensorInputs/SensorInputSocket.h: spiking-model-gpu/include/SensorInputs/SensorInputSocket.h
+	cp spiking-model-gpu/include/SensorInputs/SensorInputSocket.h $(COREDIR)/include/SensorInputs/
 
 $(COREDIR)/include/SensorInputs/SensorSonataFile.h: spiking-model-gpu/include/SensorInputs/SensorSonataFile.h
 	cp spiking-model-gpu/include/SensorInputs/SensorSonataFile.h $(COREDIR)/include/SensorInputs/

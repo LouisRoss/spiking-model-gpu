@@ -77,17 +77,17 @@ namespace embeddedpenguins::core::neuron::model
             }
         }
 
-        virtual bool Connect(const string& connectionString) override
+        virtual bool Connect() override
         {
             errorReason_.clear();
 
             if (spikeOutput_ && valid_)
-                return spikeOutput_->Connect(connectionString);
+                return spikeOutput_->Connect();
 
             if (!spikeOutput_)
             {
                 std::ostringstream os;
-                os << "Error calling Connect(" << connectionString <<"): spike output library " 
+                os << "Error calling Connect(): spike output library " 
                     << spikeOutputSharedLibraryPath_ << " not loaded";
                 errorReason_ = os.str();
             }
@@ -95,7 +95,7 @@ namespace embeddedpenguins::core::neuron::model
             if (!valid_)
             {
                 std::ostringstream os;
-                os << "Error calling Connect(" << connectionString <<"): invalid spike output library " 
+                os << "Error calling Connect(): invalid spike output library " 
                     << spikeOutputSharedLibraryPath_;
                 errorReason_ = os.str();
             }

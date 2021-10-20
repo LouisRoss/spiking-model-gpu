@@ -96,22 +96,14 @@ namespace embeddedpenguins::gpu::neuron::model
                             }
                         }
 
-                        string outputStreamerConnectionString { "" };
-                        if (outputStreamerJson.contains("ConnectionString"))
-                        {
-                            const json& connectionStringJson = outputStreamerJson["ConnectionString"];
-                            if (connectionStringJson.is_string())
-                                outputStreamerConnectionString = connectionStringJson.get<string>();
-                        }
-
                         if (!outputStreamerLocation.empty())
                         {
                             cout << "Creating output streamer proxy " << outputStreamerLocation << "\n";
                             auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
                             proxy->CreateProxy(context_);
 
-                            cout << "Connecting output streamer " << outputStreamerLocation << " to '" << outputStreamerConnectionString << "'\n";
-                            if (proxy->Connect(outputStreamerConnectionString))
+                            cout << "Connecting output streamer " << outputStreamerLocation << "'\n";
+                            if (proxy->Connect())
                                 spikeOutputs_.push_back(std::move(proxy));
                             else
                                 cout << "Unable to connect to output streamer " << outputStreamerLocation << "\n";
