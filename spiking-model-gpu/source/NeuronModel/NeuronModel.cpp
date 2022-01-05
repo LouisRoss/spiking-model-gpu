@@ -10,9 +10,9 @@
 #include "ModelEngineContext.h"
 #include "GpuModelCarrier.h"
 #include "GpuModelHelper.h"
-#include "GpuModelUi.h"
-#include "ICommandControlAcceptor.h"
-#include "QueryResponseListenSocket.h"
+//#include "GpuModelUi.h"
+//#include "ICommandControlAcceptor.h"
+//#include "QueryResponseListenSocket.h"
 #include "CommandControlHandler.h"
 
 using std::cout;
@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
 	}
 
     ModelRunner<NeuronRecord> modelRunner;
-
+/*
     modelRunner.AddCommandControlAcceptor(
         std::move(make_unique<GpuModelUi>(modelRunner))
     );
@@ -52,16 +52,15 @@ int main(int argc, char* argv[])
     modelRunner.AddCommandControlAcceptor(
         std::move(make_unique<QueryResponseListenSocket>("0.0.0.0", "8000"))
     );
-
+*/
     try
     {
-        cout << "Calling modelRunner.Initialize()\n";
         if (!modelRunner.Initialize(argc, argv))
         {
             cout << "Cannot initialize model: " << modelRunner.Reason() << "\nstopping\n";
             return 1;
         }
-
+/*
         if (!modelRunner.ControlFile().empty())
         {
             cout << "Model ControlFile not empty, calling modelRunner.RunWithExistingModel()\n";
@@ -71,8 +70,7 @@ int main(int argc, char* argv[])
                 return 1;
             }
         }
-
-        cout << "Calling modelRunner.RunCommandControl()\n";
+*/
         modelRunner.RunCommandControl();
     } catch (libsocket::socket_exception ex)
     {

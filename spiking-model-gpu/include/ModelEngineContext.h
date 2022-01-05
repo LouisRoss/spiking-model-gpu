@@ -87,6 +87,7 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;
+            cout << "Context initialized with ticks = " << EnginePeriod.count() << " us\n";
 
             return true;
         }

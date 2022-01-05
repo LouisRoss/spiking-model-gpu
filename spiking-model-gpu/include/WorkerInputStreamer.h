@@ -77,9 +77,9 @@ namespace embeddedpenguins::gpu::neuron::model
         ISensorInput* CreateProxy()
         {
             string inputStreamerLocation { "" };
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
-            if (!executionJson.is_null())
+            if (context_.Configuration.Control().contains("Execution"))
             {
+                const json& executionJson = context_.Configuration.Control()["Execution"];
                 const json& inputStreamerJson = executionJson["InputStreamer"];
                 if (inputStreamerJson.is_string())
                     inputStreamerLocation = inputStreamerJson.get<string>();
@@ -98,16 +98,17 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void CreateProxies()
         {
-            if (!context_.Configuration.Configuration().contains("Execution"))
+            cout << "\n*** Creating Spike Input proxies from 'Executiion' section of configuration file\n"; 
+            if (!context_.Configuration.Control().contains("Execution"))
             {
-                cout << "Configuration contains no 'Execution' element, not creating any input streamers\n";
+                cout << "Control contains no 'Execution' element, not creating any input streamers\n";
                 return;
             }
 
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
+            const json& executionJson = context_.Configuration.Control()["Execution"];
             if (!executionJson.contains("InputStreamers"))
             {
-                cout << "Configuration 'Execution' element contains no 'InputStreamers' subelement, not creating any input streamers\n";
+                cout << "Control 'Execution' element contains no 'InputStreamers' subelement, not creating any input streamers\n";
                 return;
             }
 
@@ -142,17 +143,17 @@ namespace embeddedpenguins::gpu::neuron::model
                             auto proxy = make_unique<SensorInputProxy>(inputStreamerLocation);
                             proxy->CreateProxy(context_.Configuration);
 
-                            cout << "Connecting output streamer " << inputStreamerLocation << " to '" << inputStreamerConnectionString << "'\n";
+                            cout << "Connecting input streamer " << inputStreamerLocation << " to '" << inputStreamerConnectionString << "'\n";
                             if (proxy->Connect(inputStreamerConnectionString))
                                 sensorInputs_.push_back(std::move(proxy));
                             else
-                                cout << "Unable to connect to output streamer " << inputStreamerLocation << "\n";
+                                cout << "Unable to connect to input streamer " << inputStreamerLocation << "\n";
                         }
                     }
                 }
             }
 
-            cout << "Created " << sensorInputs_.size() << " spike output proxy objects\n";
+            cout << "***Created " << sensorInputs_.size() << " spike input proxy objects\n";
         }
     };
 }

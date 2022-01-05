@@ -1,4 +1,5 @@
 {
     "ConfigFilePath": "../config",
-    "PythonInterpreter": "python3"
+    "PythonInterpreter": "python3",
+    "DefaultControlFile": "defaultcontrol"
 }

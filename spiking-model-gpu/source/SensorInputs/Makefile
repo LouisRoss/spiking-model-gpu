@@ -17,7 +17,7 @@ LDIR=../../lib
 LIBS= -ldl -lhdf5_serial -ltbb
 
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SpikeSignalProtocol.h 
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SpikeSignalProtocol.h 
 DEPS = $(patsubst %,$(ILDIR)/%,$(_DEPS))
 
 _SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h  SensorSonataFile.h 
@@ -48,7 +48,15 @@ $(BDIR)/SensorInputSocket.so: $(ODIR)/SensorInputSocket.o $(LIBSOCKETOBJS)
 $(BDIR)/SensorSonataFile.so: $(ODIR)/SensorSonataFile.o
 	$(CC) -shared -o $@ $^ $(DEBUGFLAG) $(LFLAGS) $(LIBS)
 
-$(ODIR)/%.o: %.cpp $(DEPS) $(SENSORINPUTDEPS) $(SONATADEPS)
+#$(ODIR)/%.o: %.cpp $(DEPS) $(SENSORINPUTDEPS) $(SONATADEPS)
+#	mkdir -p $(ODIR)
+#	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
+
+$(ODIR)/SensorInputFile.o: SensorInputFile.cpp $(DEPS) $(SENSORINPUTDEPS) $(SONATADEPS)
+	mkdir -p $(ODIR)
+	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
+
+$(ODIR)/SensorInputSocket.o: SensorInputSocket.cpp $(DEPS) $(SENSORINPUTDEPS)
 	mkdir -p $(ODIR)
 	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
 

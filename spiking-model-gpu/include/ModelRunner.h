@@ -16,11 +16,15 @@
 #include "IModelRunner.h"
 #include "IModelHelper.h"
 #include "GpuModelCarrier.h"
-#include "GpuModelHelper.h"
+//#include "GpuModelHelper.h"
 #include "GpuPackageHelper.h"
 #include "ModelEngine.h"
-#include "ICommandControlAcceptor.h"
 #include "IQueryHandler.h"
+#include "CommandControlAcceptors/ICommandControlAcceptor.h"
+#include "CommandControlAcceptors/ICommandControlAcceptor.h"
+#include "CommandControlAcceptors/GpuModelUi.h"
+#include "CommandControlAcceptors/CommandControlBasicUi.h"
+#include "CommandControlAcceptors/QueryResponseListenSocket.h"
 #include "CommandControlHandler.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -42,6 +46,143 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
     using embeddedpenguins::core::neuron::model::IQueryHandler;
     using embeddedpenguins::core::neuron::model::CommandControlHandler;
+    using embeddedpenguins::core::neuron::model::CommandControlBasicUi;
+    using embeddedpenguins::core::neuron::model::QueryResponseListenSocket;
+
+    namespace runner
+    {
+        class ModelRunnerInitializer
+        {
+            IModelRunner& runner_;
+            ConfigurationRepository& configuration_;
+            bool& valid_;
+            vector<unique_ptr<ICommandControlAcceptor>>& commandControlAcceptors_;
+
+        public:
+            ModelRunnerInitializer(IModelRunner& runner, ConfigurationRepository& configuration, bool& valid, vector<unique_ptr<ICommandControlAcceptor>>& commandControlAcceptors) :
+                runner_(runner),
+                configuration_(configuration),
+                valid_(valid),
+                commandControlAcceptors_(commandControlAcceptors)
+            {
+            }
+
+            bool InitializeCommandControlAccpetors(int argc, char* argv[])
+            {
+                cout << "\n****Model runner initializing command and control acceptors\n";
+
+                if (!configuration_.Control().contains("Execution"))
+                {
+                    cout << "Initialization of Command/Control acceptors failed: no 'Execution' element in control file\n";
+                    valid_ = false;
+                    return valid_;
+                }
+                
+                const json& executionJson = configuration_.Control()["Execution"];
+                if (!executionJson.contains("CommandControlAcceptors"))
+                {
+                    cout << "Initialization of Command/Control acceptors failed: 'Execution' element in control file contains no 'CommandControlAcceptors' element\n";
+                    valid_ = false;
+                    return valid_;
+                }
+
+                int ccCount { 0 };
+                auto oneCC { false };
+                const json& commandControlAcceptorsJson = executionJson["CommandControlAcceptors"];
+                if (commandControlAcceptorsJson.is_array())
+                {
+                    for (auto& [key, commandControlAcceptorJson] : commandControlAcceptorsJson.items())
+                    {
+                        ccCount++;
+                        if (InitializeCommandControlAccpetor(commandControlAcceptorJson, argc, argv))
+                            oneCC = true;
+                    }
+                }
+
+                valid_ = oneCC;
+                cout << "****Model runner initialized " << ccCount << " command and control acceptors " << (valid_ ? "with at least one success" : "but none were successful") << "\n\n";
+                return valid_;
+            }
+
+        private:
+            bool InitializeCommandControlAccpetor(const json& commandControlAcceptorJson, int argc, char* argv[])
+            {
+                if (commandControlAcceptorJson.is_object())
+                {
+                    if (commandControlAcceptorJson.contains("AcceptorType"))
+                    {
+                        string acceptorType = commandControlAcceptorJson["AcceptorType"].get<string>();
+                        std::transform(acceptorType.begin(), acceptorType.end(), acceptorType.begin(), [](unsigned char c){ return std::tolower(c); });
+                        if (acceptorType == "commandcontrolbasicui")
+                        {
+                            return AddCommandControlAcceptor(std::move(make_unique<CommandControlBasicUi>(runner_)), argc, argv);
+                        }
+                        else if (acceptorType == "commandcontrolconsoleui")
+                        {
+                            return AddCommandControlAcceptor(std::move(make_unique<GpuModelUi>(runner_)), argc, argv);
+                        }
+                        else if (acceptorType == "commandcontrolsocket")
+                        {
+                            string connectionString { };
+                            if (commandControlAcceptorJson.contains("ConnectionString"))
+                            {
+                                connectionString = commandControlAcceptorJson["ConnectionString"].get<string>();
+                            }
+                            auto [host, port] = ParseConnectionString(connectionString);
+
+                            return AddCommandControlAcceptor(std::move(make_unique<QueryResponseListenSocket>(host, port)), argc, argv);
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            //
+            // Multiple command & control acceptors (which must implement ICommandControlAcceptor)
+            // may be added to the model runner, and each will be given time to run on the main thread.
+            //
+            bool AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor, int argc, char* argv[])
+            {
+                cout << "Parsing arguments for command and control acceptor" << commandControlAcceptor->Description() << "\n"; 
+                if (!commandControlAcceptor->ParseArguments(argc, argv))
+                {
+                    cout << "Failed parsing arguments for command and control acceptor " << commandControlAcceptor->Description() << "\n";
+                    valid_ = false;
+                    return valid_;
+                }
+
+                cout << "Runner initializing command and control acceptor" << commandControlAcceptor->Description() << "\n"; 
+                if (!commandControlAcceptor->Initialize())
+                {
+                    cout << "Failed initializing command and control acceptor " << commandControlAcceptor->Description() << "\n";
+                    valid_ = false;
+                    return valid_;
+                }
+
+                cout << "Adding command and control acceptor " << commandControlAcceptor->Description() << " to runner\n";
+                commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
+                return valid_;
+            }
+
+            tuple<string, string> ParseConnectionString(const string& connectionString)
+            {
+                string host {"0.0.0.0"};
+                string port {"8000"};
+
+                auto colonPos = connectionString.find(":");
+                if (colonPos != string::npos)
+                {
+                    auto tempHost = connectionString.substr(0, colonPos);
+                    if (!tempHost.empty()) host = tempHost;
+                    auto tempPort = connectionString.substr(colonPos + 1);
+                    if (!tempPort.empty()) port = tempPort;
+                }
+
+                return {host, port};
+            }
+        };
+    }
 
     //
     // Wrap the most common startup and teardown sequences to run a model
@@ -70,17 +211,19 @@ namespace embeddedpenguins::gpu::neuron::model
 
     public:
         virtual const string& Reason() const override { return reason_; }
-        virtual const string& ControlFile() const override { return controlFile_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
-        virtual const ConfigurationRepository& getConfigurationRepository() const override { return configuration_; }
+        virtual ConfigurationRepository& getConfigurationRepository() override { return configuration_; }
         virtual const json& Control() const override { return configuration_.Control(); }
         virtual const json& Configuration() const override { return configuration_.Configuration(); }
         virtual const json& Monitor() const override { return configuration_.Monitor(); }
         virtual const json& Settings() const override { return configuration_.Settings(); }
+        virtual const unsigned long int ModelSize() const override { return carrier_.ModelSize(); }
         virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
         virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
+        virtual const long long int GetTotalWork() const override { return modelEngine_->GetTotalWork(); }
+        virtual const long long int GetIterations() const override { return modelEngine_->GetIterations(); }
+        virtual IModelHelper* Helper() const override { return helper_.get(); }
         ModelEngineContext& Context() const { return modelEngine_->Context(); }
-        IModelHelper* Helper() { return helper_.get(); }
         GpuModelCarrier& Carrier() { return carrier_; }
 
     public:
@@ -102,6 +245,7 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelRunner() :
             helper_(std::move(GenerateModelHelper()))
         {
+            cout << "\n***Creating new model runner with default query handler\n";
             queryHandler_ = std::move(make_unique<CommandControlHandler<RECORDTYPE>>(*this));
         }
 
@@ -109,6 +253,7 @@ namespace embeddedpenguins::gpu::neuron::model
             helper_(std::move(GenerateModelHelper())),
             queryHandler_(std::move(queryHandler))
         {
+            cout << "\n***Creating new model runner with specified query handler\n";
         }
 
         unique_ptr<IModelHelper> GenerateModelHelper()
@@ -119,23 +264,13 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         //
-        // Multiple command & control acceptors (which must implement ICommandControlAcceptor)
-        // may be added to the model runner, and each will be given time to run on the main thread.
-        //
-        virtual void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor) override
-        {
-            cout << "Adding command and control acceptor " << commandControlAcceptor->Description() << " to runner\n";
-            commandControlAcceptors_.push_back(std::move(commandControlAcceptor));
-        }
-
-        //
         // After all C&C acceptors are added, initialize with the command line argments.
         // If a control file was part of the command line, the model will be automatically
         // run with that control file.
         //
         virtual bool Initialize(int argc, char* argv[]) override
         {
-            cout << "Runner parsing argument\n";
+            cout << "\n***Model runner initializing\n";
             ParseArgs(argc, argv);
 
             if (!valid_)
@@ -144,6 +279,13 @@ namespace embeddedpenguins::gpu::neuron::model
             if (PrepareControlFile())
                 InitializeConfiguration();
 
+            if (valid_)
+            {
+                runner::ModelRunnerInitializer initializer(*this, configuration_, valid_, commandControlAcceptors_);
+                initializer.InitializeCommandControlAccpetors(argc, argv);
+            }
+
+            cout << "***Model runner initialized into " << (valid_ ? "valid" : "invalid") << " state\n";
             return valid_;
         }
 
@@ -153,6 +295,8 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         virtual void RunCommandControl() override
         {
+            cout << "\n***Model runner runnning comand and control acceptors\n";
+
             auto quit { false };
             while (!quit)
             {
@@ -165,6 +309,8 @@ namespace embeddedpenguins::gpu::neuron::model
                     }
                 );
             }
+
+            cout << "\n***Model runner quitting\n";
 
             // Make sure we are not paused before stopping.
             Continue();
@@ -279,28 +425,25 @@ namespace embeddedpenguins::gpu::neuron::model
             return false;
         }
 
+        virtual bool DeployModel(const string& modelName, const string& deploymentName, const string& engineName) override
+        {
+            configuration_.ModelName(modelName);
+            configuration_.DeploymentName(deploymentName);
+            configuration_.EngineName(engineName);
+            
+            if (!valid_)
+                return false;
+
+            cout << "Runner deploying with model: " << modelName << " deployment: " << deploymentName << " engine: " << engineName << "\n";
+            return Run();
+        }
+
     private:
         void InitializeConfiguration()
         {
-            cout << "Runner initializing configuration\n";
+            cout << "\n***Model runner initializing configuration from control fle " << controlFile_ << "\n";
             valid_ = configuration_.InitializeConfiguration(controlFile_);
-
-            if (!valid_)
-            {
-                reason_ = "Unable to initialize configuration from control file " + controlFile_;
-                return;
-            }
-
-            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
-                [this](auto& acceptor)
-                { 
-                    cout << "Runner initializing command and control acceptor" << acceptor->Description() << "\n"; 
-                    if (!acceptor->Initialize())
-                    {
-                        this->reason_ = "Failed initializing command and control acceptor " + acceptor->Description();
-                        this->valid_ = false;
-                    }
-                });
+            cout << "*** Model runner done initializing configuration\n";
         }
 
         //
@@ -326,13 +469,6 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void ParseArgs(int argc, char *argv[])
         {
-            static string usage {
-                " <control file>\n"
-                "  <control file> is the name of the json file "
-                "containing the control information (configuration"
-                "and monitor) for the test to run.\n"
-            };
-
             for (auto i = 1; i < argc; i++)
             {
                 const auto& arg = argv[i];
@@ -340,26 +476,15 @@ namespace embeddedpenguins::gpu::neuron::model
                 controlFile_ = arg;
             }
 
-            valid_ = true;
 
-            for_each(commandControlAcceptors_.begin(), commandControlAcceptors_.end(), 
-                [&argc, &argv, this](auto& acceptor)
-                { 
-                    cout << "Runner parsing arguments for command and control acceptor" << acceptor->Description() << "\n"; 
-                    if (!acceptor->ParseArguments(argc, argv))
-                    {
-                        this->reason_ = "Failed initializing command and control acceptor " + acceptor->Description();
-                        this->valid_ = false;
-                    }
-                });
+            valid_ = true;
         }
 
         bool PrepareControlFile()
         {
             if (controlFile_.empty())
             {
-                cout << "No control file given, not running any model\n";
-                return false;
+                cout << "No control file given, using default\n";
             }
             else
             {

@@ -11,6 +11,7 @@
 
 #include "nlohmann/json.hpp"
 
+#include "IModelHelper.h"
 #include "ConfigurationRepository.h"
 #include "NeuronRecordCommon.h"
 #include "Initializers/PackageInitializerDataSocket.h"
@@ -28,6 +29,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using nlohmann::json;
 
+    using embeddedpenguins::core::neuron::model::IModelHelper;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::NeuronRecordType;
     using embeddedpenguins::core::neuron::model::PackageInitializerDataSocket;
@@ -51,8 +53,9 @@ namespace embeddedpenguins::gpu::neuron::model
         // IModelHelper implementation
         virtual const json& Configuration() const override { return configuration_.Configuration(); }
         virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
-        virtual const unsigned long int NeuronCount() const override { return carrier_.NeuronCount; }
-        virtual const unsigned int ExpansionCount() const override { return carrier_.ExpansionCount; }
+        virtual const string& ModelName() const override { return configuration_.ModelName(); }
+        virtual const string& DeploymentName() const override { return configuration_.DeploymentName(); }
+        virtual const string& EngineName() const override { return configuration_.EngineName(); }
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
 
@@ -105,24 +108,24 @@ namespace embeddedpenguins::gpu::neuron::model
             return row * width_ + column;
         }
 
-        virtual unsigned long int GetNeuronTicksSinceLastSpike(const unsigned long int source) override
+        virtual unsigned long int GetNeuronTicksSinceLastSpike(const unsigned long int source) const override
         {
             return carrier_.NeuronsHost[source].TicksSinceLastSpike;
         }
 
-        virtual bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId) override
+        virtual bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId) const override
         {
             auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
             return ((unsigned long int*)synapsesForNeuron[synapseId].PresynapticNeuron) != 0;
         }
 
-        virtual int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId) override
+        virtual int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId) const override
         {
             auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
             return synapsesForNeuron[synapseId].Strength;
         }
 
-        virtual unsigned long int GetPresynapticNeuron(const unsigned long int neuronIndex, const unsigned int synapseId) override
+        virtual unsigned long int GetPresynapticNeuron(const unsigned long int neuronIndex, const unsigned int synapseId) const override
         {
             // Only available in GPU, fake it here.
             return 0;

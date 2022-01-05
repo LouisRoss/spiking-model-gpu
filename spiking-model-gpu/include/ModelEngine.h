@@ -53,6 +53,7 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, IModelHelper* helper) :
             context_(configuration/*, helper*/)
         {
+            cout << "\nCreating new ModelEngine\n";
             workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, carrier, helper));
         }
 
@@ -66,11 +67,16 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         bool Initialize()
         {
-            return context_.Initialize();
+            cout << "\n***Initializing model engine\n";
+            auto initialized = context_.Initialize();
+            cout << "***Model engine initialized\n\n";
+
+            return initialized;
         }
 
         bool Run()
         {
+            cout << "\n***Running model engine\n";
             startTime_ = high_resolution_clock::now();
             context_.Run = true;
 
@@ -83,6 +89,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void Quit()
         {
+            cout << "\n***Stopping model engine\n";
             context_.Run = false;
             /*
             {

@@ -6,8 +6,9 @@
 
 #include "nlohmann/json.hpp"
 
-#include "ICommandControlAcceptor.h"
+#include "CommandControlAcceptors/ICommandControlAcceptor.h"
 #include "ConfigurationRepository.h"
+#include "IModelHelper.h"
 
 namespace embeddedpenguins::core::neuron::model
 {
@@ -23,16 +24,18 @@ namespace embeddedpenguins::core::neuron::model
         virtual ~IModelRunner() = default;
 
         virtual const string& Reason() const = 0;
-        virtual const string& ControlFile() const = 0;
-        virtual const ConfigurationRepository& getConfigurationRepository() const = 0;
+        virtual ConfigurationRepository& getConfigurationRepository() = 0;
         virtual const json& Control() const = 0;
         virtual const json& Configuration() const = 0;
         virtual const json& Monitor() const = 0;
         virtual const json& Settings() const = 0;
+        virtual const unsigned long int ModelSize() const = 0;
         virtual const microseconds EnginePeriod() const = 0;
+        virtual const long long int GetTotalWork() const = 0;
+        virtual const long long int GetIterations() const = 0;
         virtual microseconds& EnginePeriod() = 0;
+        virtual IModelHelper* Helper() const = 0;
 
-        virtual void AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor) = 0;
         virtual bool Initialize(int argc, char* argv[]) = 0;
         virtual void RunCommandControl() = 0;
         virtual bool RunWithNewModel(const string& controlFile) = 0;
@@ -45,5 +48,6 @@ namespace embeddedpenguins::core::neuron::model
         virtual json RenderStatus() = 0;
         virtual json RenderDynamicStatus() = 0;
         virtual bool SetValue(const json& controlValues) = 0;
+        virtual bool DeployModel(const string& modelName, const string& deploymentName, const string& engineName) = 0;
     };
 }

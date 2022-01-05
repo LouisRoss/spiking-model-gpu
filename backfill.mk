@@ -17,8 +17,11 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h CommandControlConsoleUi.h ICommandControlAcceptor.h QueryResponseSocket.h QueryResponseListenSocket.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
+
+_MODELCOMMANDCONTROLS = CommandControlBasicUi.h CommandControlConsoleUi.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h
+MODELCOMMANDCONTROLS = $(patsubst %,$(COREDIR)/include/CommandControlAcceptors/%,$(_MODELCOMMANDCONTROLS))
 
 _MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h ModelPackageInitializer.h PackageInitializerDataSocket.h
 MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
@@ -30,7 +33,7 @@ _MODELOUTPUTS = ISpikeOutput.h SpikeOutputRecord.h SpikeOutputSocket.h
 MODELOUTPUTS = $(patsubst %,$(COREDIR)/include/SpikeOutputs/%,$(_MODELOUTPUTS))
 
 
-all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) $(MODELOUTPUTS)
+all: $(CORECONFIGS) $(COREUIS) $(MODELINCS) $(MODELINITS) $(MODELSENSORS) $(MODELOUTPUTS) $(MODELCOMMANDCONTROLS)
 .PHONY: all
 
 # All files in the config folder
@@ -117,18 +120,6 @@ $(COREDIR)/include/Log.h: spiking-model-gpu/include/Log.h
 $(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelInitializerProxy.h
 	cp spiking-model-gpu/include/ModelInitializerProxy.h $(COREDIR)/include/
 
-$(COREDIR)/include/CommandControlConsoleUi.h: spiking-model-gpu/include/CommandControlConsoleUi.h
-	cp spiking-model-gpu/include/CommandControlConsoleUi.h $(COREDIR)/include/
-
-$(COREDIR)/include/ICommandControlAcceptor.h: spiking-model-gpu/include/ICommandControlAcceptor.h
-	cp spiking-model-gpu/include/ICommandControlAcceptor.h $(COREDIR)/include/
-
-$(COREDIR)/include/QueryResponseSocket.h: spiking-model-gpu/include/QueryResponseSocket.h
-	cp spiking-model-gpu/include/QueryResponseSocket.h $(COREDIR)/include/
-
-$(COREDIR)/include/QueryResponseListenSocket.h: spiking-model-gpu/include/QueryResponseListenSocket.h
-	cp spiking-model-gpu/include/QueryResponseListenSocket.h $(COREDIR)/include/
-
 $(COREDIR)/include/IQueryHandler.h: spiking-model-gpu/include/IQueryHandler.h
 	cp spiking-model-gpu/include/IQueryHandler.h $(COREDIR)/include/
 
@@ -161,6 +152,25 @@ $(COREDIR)/include/SpikeSignalProtocol.h: spiking-model-gpu/include/SpikeSignalP
 
 $(COREDIR)/include/IModelHelper.h: spiking-model-gpu/include/IModelHelper.h
 	cp spiking-model-gpu/include/IModelHelper.h $(COREDIR)/include/
+
+# All files from the include/CommandControlAcceptors folder
+$(COREDIR)/include/CommandControlAcceptors/ICommandControlAcceptor.h: spiking-model-gpu/include/CommandControlAcceptors/ICommandControlAcceptor.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/ICommandControlAcceptor.h $(COREDIR)/include/CommandControlAcceptors/
+
+$(COREDIR)/include/CommandControlAcceptors/CommandControlConsoleUi.h: spiking-model-gpu/include/CommandControlAcceptors/CommandControlConsoleUi.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/CommandControlConsoleUi.h $(COREDIR)/include/CommandControlAcceptors/
+
+$(COREDIR)/include/CommandControlAcceptors/GpuModelUi.h: spiking-model-gpu/include/CommandControlAcceptors/GpuModelUi.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/GpuModelUi.h $(COREDIR)/include/CommandControlAcceptors/
+
+$(COREDIR)/include/CommandControlAcceptors/QueryResponseListenSocket.h: spiking-model-gpu/include/CommandControlAcceptors/QueryResponseListenSocket.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/QueryResponseListenSocket.h $(COREDIR)/include/CommandControlAcceptors/
+
+$(COREDIR)/include/CommandControlAcceptors/QueryResponseSocket.h: spiking-model-gpu/include/CommandControlAcceptors/QueryResponseSocket.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/QueryResponseSocket.h $(COREDIR)/include/CommandControlAcceptors/
+
+$(COREDIR)/include/CommandControlAcceptors/CommandControlBasicUi.h: spiking-model-gpu/include/CommandControlAcceptors/CommandControlBasicUi.h
+	cp spiking-model-gpu/include/CommandControlAcceptors/CommandControlBasicUi.h $(COREDIR)/include/CommandControlAcceptors/
 
 # All files from the include/Initializers folder
 $(COREDIR)/include/Initializers/IModelInitializer.h: spiking-model-gpu/include/Initializers/IModelInitializer.h

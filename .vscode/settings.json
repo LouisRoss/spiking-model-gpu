@@ -93,5 +93,6 @@
         "SpikeOutputSocket.cpp": "cuda-cpp"
     },
     "cmake.configureOnOpen": true,
-    "C_Cpp.errorSquiggles": "Enabled"
+    "C_Cpp.errorSquiggles": "Enabled",
+    "search.useIgnoreFiles": false
 }

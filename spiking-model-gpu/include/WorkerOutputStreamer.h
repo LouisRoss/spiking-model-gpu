@@ -66,16 +66,17 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         void CreateProxies()
         {
-            if (!context_.Configuration.Configuration().contains("Execution"))
+            cout << "\n*** Creating Spike Output proxies from 'Executiion' section of configuration file\n";
+            if (!context_.Configuration.Control().contains("Execution"))
             {
-                cout << "Configuration contains no 'Execution' element, not creating any output streamers\n";
+                cout << "Control contains no 'Execution' element, not creating any output streamers\n";
                 return;
             }
 
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
+            const json& executionJson = context_.Configuration.Control()["Execution"];
             if (!executionJson.contains("OutputStreamers"))
             {
-                cout << "Configuration 'Execution' element contains no 'OutputStreamers' subelement, not creating any output streamers\n";
+                cout << "Control 'Execution' element contains no 'OutputStreamers' subelement, not creating any output streamers\n";
                 return;
             }
 
@@ -112,7 +113,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 }
             }
 
-            cout << "Created " << spikeOutputs_.size() << " spike output proxy objects\n";
+            cout << "***Created " << spikeOutputs_.size() << " spike output proxy objects\n";
         }
     };
 }

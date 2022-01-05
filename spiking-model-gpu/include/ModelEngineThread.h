@@ -114,13 +114,14 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
+/*
             if (!helper_->AllocateModel())
             {
                 cout << "ModelEngineThread.Initialize failed at helper_->AllocateModel()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
             }
-
+*/
             if (!InitializeModel())
             {
                 cout << "ModelEngineThread.Initialize failed at InitializeModel()\n";
@@ -222,9 +223,9 @@ namespace embeddedpenguins::gpu::neuron::model
         bool InitializeModel()
         {
             string modelInitializerLocation { "" };
-            const json& executionJson = context_.Configuration.Configuration()["Execution"];
-            if (!executionJson.is_null())
+            if (context_.Configuration.Control().contains("Execution"))
             {
+                const json& executionJson = context_.Configuration.Control()["Execution"];
                 const json& initializerLocationJson = executionJson["InitializerLocation"];
                 if (initializerLocationJson.is_string())
                     modelInitializerLocation = initializerLocationJson.get<string>();
@@ -241,9 +242,7 @@ namespace embeddedpenguins::gpu::neuron::model
             initializer.CreateProxy(helper_);
 
             // Let the initializer initialize the model's static state.
-            initializer.Initialize();
-
-            return true;
+            return initializer.Initialize();
         }
 
         void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,

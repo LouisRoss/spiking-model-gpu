@@ -320,11 +320,14 @@ LIBSOCKETCDIR=../libsocket/C
 IDIR=../../include
 ILDIR=../../../include
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h PackageInitializerProtocol.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h PackageInitializerProtocol.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _INITIALIZERDEPS = IModelInitializer.h ModelPackageInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h PackageInitializerDataSocket.h
 INITIALIZERDEPS = $(patsubst %,$(IDIR)/Initializers/%,$(_INITIALIZERDEPS))
+
+_COMMANDCONTROLACCEPTORDEPS = ICommandControlAcceptor.h GpuModelUi.h CommandControlConsoleUi.h CommandControlBasicUi.h QueryResponseListenSocket.h QueryResponseSocket.h 
+COMMANDCONTROLACCEPTORDEPS = $(patsubst %,$(IDIR)/CommandControlAcceptors/%,$(_COMMANDCONTROLACCEPTORDEPS))
 
 _SONATADEPS = SonataCompiledModel.h SonataEdgeModel.h SonataEdgeModelLoader.h SonataInputSpikeLoader.h SonataModelLoader.h SonataModelPersister.h SonataModelRepository.h SonataNodeModel.h SonataNodeModelLoader.h
 SONATADEPS = $(patsubst %,$(IDIR)/persistence/sonata/%,$(_SONATADEPS))
@@ -361,7 +364,7 @@ $(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include
 	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
-$(ODIR)/ModelPackageInitializer.o: ModelPackageInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+$(ODIR)/ModelPackageInitializer.o: ModelPackageInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(COMMANDCONTROLACCEPTORDEPS) $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
@@ -370,7 +373,7 @@ ModelPackageInitializer.so: $(ODIR)/ModelPackageInitializer.o  $(LIBSOCKETOBJS)
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)
 
-$(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+$(ODIR)/ModelAnticipateInitializer.o: ModelAnticipateInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(COMMANDCONTROLACCEPTORDEPS) $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
@@ -379,7 +382,7 @@ ModelAnticipateInitializer.so: $(ODIR)/ModelAnticipateInitializer.o
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)
 
-$(ODIR)/ModelLayerInitializer.o: ModelLayerInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+$(ODIR)/ModelLayerInitializer.o: ModelLayerInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(COMMANDCONTROLACCEPTORDEPS $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 
@@ -388,7 +391,7 @@ ModelLayerInitializer.so: $(ODIR)/ModelLayerInitializer.o
 	$(EXEC) mkdir -p $(BDIR)
 	$(EXEC) cp $@ $(BDIR)
 
-$(ODIR)/ModelSonataInitializer.o: ModelSonataInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(SONATADEPS)
+$(ODIR)/ModelSonataInitializer.o: ModelSonataInitializer.cpp $(DEPS) $(INITIALIZERDEPS) $(COMMANDCONTROLACCEPTORDEPS) $(SONATADEPS)
 	$(EXEC) mkdir -p $(ODIR)
 	$(CC) $(INCLUDES) $(DEBUGFLAG) $(CCFLAGS) -o $@ -c $<
 

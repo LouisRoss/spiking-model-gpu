@@ -16,7 +16,8 @@ namespace embeddedpenguins::core::neuron::model::initializerprotocol
     enum class PackageInitializerCommand : CommandFieldType
     {
         GetModelDescriptor = 0,
-        GetModelExpansion = 1
+        GetModelExpansion = 1,
+        GetModelDeployment = 2
     };
 
     struct PackageInitializerEnvelope
@@ -35,6 +36,30 @@ namespace embeddedpenguins::core::neuron::model::initializerprotocol
             string name { modelName };
             name.resize(sizeof(ModelName));
             copy(name.c_str(), name.c_str() + sizeof(ModelName), ModelName);
+        }
+    };
+
+    struct ModelDeploymentRequest : PackageInitializerEnvelope
+    {
+        PackageInitializerCommand Command { PackageInitializerCommand::GetModelDeployment };
+        char ModelName[80];
+        char DeploymentName[80];
+        char EngineName[80];
+
+        ModelDeploymentRequest() { PacketSize = sizeof(ModelDeploymentRequest) - sizeof(PackageInitializerEnvelope); }
+        ModelDeploymentRequest(const string& modelName, const string& deploymentName, const string& engineName) : ModelDeploymentRequest()
+        {
+            string name { modelName };
+            name.resize(sizeof(ModelName));
+            copy(name.c_str(), name.c_str() + sizeof(ModelName), ModelName);
+
+            name = deploymentName;
+            name.resize(sizeof(DeploymentName));
+            copy(name.c_str(), name.c_str() + sizeof(DeploymentName), DeploymentName);
+
+            name = engineName;
+            name.resize(sizeof(EngineName));
+            copy(name.c_str(), name.c_str() + sizeof(EngineName), EngineName);
         }
     };
 
@@ -63,6 +88,16 @@ namespace embeddedpenguins::core::neuron::model::initializerprotocol
         unsigned int ExpansionCount { 0 };
     };
 
+    struct ModelDeploymentResponse
+    {
+        unsigned int NeuronCount { 0 };
+        unsigned int PopulationCount { 0 };
+
+        // Immediately following this struct in memory should be an array
+        // unsigned int Deploy[PopulationCount];
+        unsigned int* GetDeployments() { return (unsigned int*)(this + 1); }
+    };
+
     struct ModelExpansionResponse
     {
         using ConnectionType = unsigned[3];
@@ -72,7 +107,7 @@ namespace embeddedpenguins::core::neuron::model::initializerprotocol
         unsigned int ConnectionCount { 0 };
 
         // Immediately following this struct in memory should be an array
-        //ConnectionType Connection[ConnectionCount];
+        // ConnectionType Connection[ConnectionCount];
         ConnectionType* GetConnections() { return (ConnectionType*)(this + 1); }
     };
 }

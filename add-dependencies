@@ -4,6 +4,7 @@ mkdir -p ./include
 
 git clone https://github.com/LouisRoss/spiking-model-core.git
 cp spiking-model-core/include/* spiking-model-gpu/include
+cp -R spiking-model-core/include/CommandControlAcceptors spiking-model-gpu/include/
 cp -R spiking-model-core/include/Initializers spiking-model-gpu/include/
 cp -R spiking-model-core/include/SensorInputs spiking-model-gpu/include/
 cp -R spiking-model-core/include/SpikeOutputs spiking-model-gpu/include/
