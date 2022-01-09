@@ -274,8 +274,7 @@ namespace embeddedpenguins::gpu::neuron::model
             if (size == 0)
             {
                 PackageInitializerDataSocket socket(configuration_.StackConfiguration());
-                // TODO - develop the model name from somewhere!
-                protocol::ModelDescriptorRequest request("layer");
+                protocol::ModelDescriptorRequest request(configuration_.ModelName());
 
                 auto response = socket.TransactWithServer<protocol::ModelDescriptorRequest, protocol::ModelDescriptorResponse>(request);
                 auto* descriptionResponse = reinterpret_cast<protocol::ModelDescriptorResponse*>(response.get());
