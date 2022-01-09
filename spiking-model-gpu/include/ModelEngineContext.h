@@ -46,7 +46,7 @@ namespace embeddedpenguins::gpu::neuron::model
         mutex Mutex;
         condition_variable Cv;
 
-        const ConfigurationRepository& Configuration;
+        ConfigurationRepository& Configuration;
         Log Logger {};
         LogLevel LoggingLevel { LogLevel::Status };
         string LogFile {"ModelEngine.log"};
@@ -59,7 +59,7 @@ namespace embeddedpenguins::gpu::neuron::model
         long long int TotalWork { 0LL };
         Performance PerformanceCounters { };
 
-        ModelEngineContext(const ConfigurationRepository& configuration) :
+        ModelEngineContext(ConfigurationRepository& configuration) :
             Configuration(configuration),
             EnginePeriod(1000)
         {

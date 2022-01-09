@@ -9,7 +9,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     // the class factories
 
-    extern "C" ISensorInput* create(const ConfigurationRepository& configuration) {
+    extern "C" ISensorInput* create(ConfigurationRepository& configuration) {
         return new SensorSonataFile(configuration);
     }
 

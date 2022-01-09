@@ -50,7 +50,7 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, const ConfigurationRepository& configuration, IModelHelper* helper) :
+        ModelEngine(GpuModelCarrier& carrier, ConfigurationRepository& configuration, IModelHelper* helper) :
             context_(configuration/*, helper*/)
         {
             cout << "\nCreating new ModelEngine\n";
