@@ -16,8 +16,11 @@ LDIR=../../lib
 LIBS= -ldl -ltbb
 
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h GpuModelUi.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SpikeSignalProtocol.h 
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h SpikeSignalProtocol.h 
 DEPS = $(patsubst %,$(ILDIR)/%,$(_DEPS))
+
+_COMMANDCONTROLDEPS = CommandControlBasicUi.h CommandControlConsoleUi.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h 
+COMMANDCONTROLDEPS = $(patsubst %,$(ILDIR)/CommandControlAcceptors/%,$(_COMMANDCONTROLDEPS))
 
 _SPIKEOUTPUTDEPS = ISpikeOutput.h  SpikeOutputRecord.h SpikeOutputSocket.h 
 SPIKEOUTPUTDEPS = $(patsubst %,$(ILDIR)/SpikeOutputs/%,$(_SPIKEOUTPUTDEPS))
@@ -41,9 +44,18 @@ $(LIBSOCKETODIR)/libinetsocket.o: $(LIBSOCKETCDIR)/inet/libinetsocket.c
 $(BDIR)/SpikeOutputSocket.so: $(ODIR)/SpikeOutputSocket.o $(LIBSOCKETOBJS)
 	$(CC) -shared -o $@ $^ $(DEBUGFLAG) $(LFLAGS) $(LIBS)
 
-$(ODIR)/%.o: %.cpp $(DEPS) $(SPIKEOUTPUTDEPS)
+#$(ODIR)/%.o: %.cpp $(DEPS) $(SPIKEOUTPUTDEPS)
+#	mkdir -p $(ODIR)
+#	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
+
+$(ODIR)/SpikeOutputRecord.o: SpikeOutputRecord.cpp $(DEPS) $(COMMANDCONTROLDEPS) $(SPIKEOUTPUTDEPS)
 	mkdir -p $(ODIR)
 	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
+
+$(ODIR)/SpikeOutputSocket.o: SpikeOutputSocket.cpp $(DEPS) $(COMMANDCONTROLDEPS) $(SPIKEOUTPUTDEPS)
+	mkdir -p $(ODIR)
+	$(CC) -c -o $@ $< $(DEBUGFLAG) $(CCFLAGS) $(LOG)
+
 
 debug:
 	make DEBUGFLAG="-g"

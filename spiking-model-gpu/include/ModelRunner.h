@@ -460,6 +460,12 @@ namespace embeddedpenguins::gpu::neuron::model
 
             WaitForQuit();
 
+            if (configuration_.ModelName().empty() || configuration_.DeploymentName().empty())
+            {
+                cout << "Undeployment detected, not starting new model engine\n";
+                return false;
+            }
+
             if (!modelEngine_)
                 if (!InitializeModelEngine())
                     return false;

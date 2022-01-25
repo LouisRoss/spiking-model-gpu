@@ -141,7 +141,7 @@ namespace embeddedpenguins::gpu::neuron::model
                         {
                             cout << "Creating input streamer proxy " << inputStreamerLocation << "\n";
                             auto proxy = make_unique<SensorInputProxy>(inputStreamerLocation);
-                            proxy->CreateProxy(context_.Configuration);
+                            proxy->CreateProxy(context_.Configuration, context_.Iterations, context_.LoggingLevel);
 
                             cout << "Connecting input streamer " << inputStreamerLocation << " to '" << inputStreamerConnectionString << "'\n";
                             if (proxy->Connect(inputStreamerConnectionString))
