@@ -46,12 +46,16 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void Process()
         {
-            auto relevantNeurons = helper_->CollectRelevantNeurons();
-            for (auto [index, activation, type] : relevantNeurons)
+            auto relevantNeurons = helper_->CollectRelevantNeurons(context_.RecordSynapseEnable);
+            for (auto [index, activation, synapseIndex, synapseStrength, type] : relevantNeurons)
             {
                 for (auto& spikeOutput : spikeOutputs_)
                 {
-                    spikeOutput->StreamOutput(index, activation, type);
+                    // If an output streamer respects the disable flag, it should be skipped if the enable flag is off.
+                    if (!spikeOutput->RespectDisableFlag() || context_.RecordEnable)
+                    {
+                        spikeOutput->StreamOutput(index, activation, synapseIndex, synapseStrength, type);
+                    }
                 }
             }
 

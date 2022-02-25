@@ -31,6 +31,7 @@ namespace embeddedpenguins::core::neuron::model
         ISpikeOutput* spikeOutput_ {};
         string errorReason_ {};
 
+        bool respectDisableFlag_ { true };
         bool isInterestedInSpikeTime_ { true };
         bool isInterestedInRefractoryTime_ { true };
         bool isInterestedInRecentTime_ { true };
@@ -68,6 +69,8 @@ namespace embeddedpenguins::core::neuron::model
 
             if (spikeOutput_ && valid_)
             {
+                respectDisableFlag_ = spikeOutput_->RespectDisableFlag();
+                cout << "Spike output " << spikeOutputSharedLibraryPath_ << (respectDisableFlag_ ? " respects" : " does not respect") << " disable flag\n";
                 isInterestedInSpikeTime_ = spikeOutput_->IsInterestedIn(NeuronRecordType::Spike);
                 cout << "Spike output " << spikeOutputSharedLibraryPath_ << (isInterestedInSpikeTime_ ? " is" : " is not") << " interested in spike-time signals\n";
                 isInterestedInRefractoryTime_ = spikeOutput_->IsInterestedIn(NeuronRecordType::Refractory);
@@ -129,6 +132,8 @@ namespace embeddedpenguins::core::neuron::model
             return false;
         }
 
+        virtual bool RespectDisableFlag() override { return respectDisableFlag_; }
+
         virtual bool IsInterestedIn(NeuronRecordType type) override
         {
             errorReason_.clear();
@@ -157,7 +162,7 @@ namespace embeddedpenguins::core::neuron::model
             return false;
         }
 
-        virtual void StreamOutput(unsigned long long neuronIndex, short int activation, NeuronRecordType  type) override
+        virtual void StreamOutput(unsigned long long neuronIndex, short int activation, unsigned short synapseIndex, short int synapseStrength, NeuronRecordType  type) override
         {
             errorReason_.clear();
 
@@ -181,7 +186,7 @@ namespace embeddedpenguins::core::neuron::model
 
             if (spikeOutput_ && valid_)
             {
-                spikeOutput_->StreamOutput(neuronIndex, activation, type);
+                spikeOutput_->StreamOutput(neuronIndex, activation, synapseIndex, synapseStrength, type);
                 return;
             }
 

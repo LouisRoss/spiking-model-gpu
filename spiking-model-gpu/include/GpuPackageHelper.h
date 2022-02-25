@@ -219,9 +219,9 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 #endif
 
-        virtual vector<tuple<unsigned long long, short int, NeuronRecordType>> CollectRelevantNeurons() override
+        virtual vector<tuple<unsigned long long, short int, unsigned short, short int, NeuronRecordType>> CollectRelevantNeurons(bool includeSynapses) override
         {
-            vector<tuple<unsigned long long, short int, NeuronRecordType>> relevantNeurons;
+            vector<tuple<unsigned long long, short int, unsigned short, short int, NeuronRecordType>> relevantNeurons;
 
             if (!carrier_.Valid)
             {
@@ -235,15 +235,27 @@ namespace embeddedpenguins::gpu::neuron::model
 
                     if (IsSpikeTick(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Spike));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Spike));
                     }
                     else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Refractory));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Refractory));
                     }
                     else if (IsActiveRecently(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, NeuronRecordType::Decay));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Decay));
+                    }
+
+                    if (includeSynapses)
+                    {
+                        for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
+                        {
+                            auto& synapse = carrier_.SynapsesHost[neuronIndex][synapseIndex];
+                            if (synapse.TickSinceLastSignal > 0)
+                            {
+                                relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, synapseIndex, synapse.Strength, NeuronRecordType::SynapseAdjust));
+                            }
+                        }
                     }
                 }
             }

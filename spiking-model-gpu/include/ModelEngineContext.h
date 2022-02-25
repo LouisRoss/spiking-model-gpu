@@ -43,6 +43,7 @@ namespace embeddedpenguins::gpu::neuron::model
         atomic<bool> Run { false };
         atomic<bool> Pause { false };
         atomic<bool> RecordEnable { false };
+        atomic<bool> RecordSynapseEnable { false };
         mutex Mutex;
         condition_variable Cv;
 
@@ -104,6 +105,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"logfile", LogFile.c_str()},
                 {"recordfile", Configuration.ComposeRecordPath().c_str()},
                 {"recordenable", RecordEnable ? true : false},
+                {"recordsynapses", RecordSynapseEnable ? true : false},
                 {"engineperiod", EnginePeriod.count()},
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
@@ -141,6 +143,11 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     RecordEnable = controlValues["recordenable"].get<bool>();
                     cout << "Changed record enable to " << RecordEnable << "\n";
+                }
+                if (controlValues.contains("recordsynapses"))
+                {
+                    RecordSynapseEnable = controlValues["recordsynapses"].get<bool>();
+                    cout << "Changed record synapse enable to " << RecordSynapseEnable << "\n";
                 }
                 if (controlValues.contains("loglevel"))
                 {
