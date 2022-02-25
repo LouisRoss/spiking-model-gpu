@@ -73,29 +73,6 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
     private:
-    /*
-        ISensorInput* CreateProxy()
-        {
-            string inputStreamerLocation { "" };
-            if (context_.Configuration.Control().contains("Execution"))
-            {
-                const json& executionJson = context_.Configuration.Control()["Execution"];
-                const json& inputStreamerJson = executionJson["InputStreamer"];
-                if (inputStreamerJson.is_string())
-                    inputStreamerLocation = inputStreamerJson.get<string>();
-            }
-
-            ISensorInput* proxy { nullptr };
-            if (!inputStreamerLocation.empty())
-            {
-                proxy = new SensorInputProxy(inputStreamerLocation);
-                proxy->CreateProxy(context_.Configuration);
-            }
-
-            return proxy;
-        }
-    */
-
         void CreateProxies()
         {
             cout << "\n*** Creating Spike Input proxies from 'Executiion' section of configuration file\n"; 

@@ -114,14 +114,6 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         bool Initialize()
         {
-/*
-            if (!helper_->AllocateModel())
-            {
-                cout << "ModelEngineThread.Initialize failed at helper_->AllocateModel()\n";
-                context_.EngineInitializeFailed = true;
-                return false;
-            }
-*/
             if (!InitializeModel())
             {
                 cout << "ModelEngineThread.Initialize failed at InitializeModel()\n";

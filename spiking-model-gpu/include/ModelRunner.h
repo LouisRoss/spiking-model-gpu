@@ -230,9 +230,8 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         // Usage should follow this sequence:
         // 1. Construct a new instance.
-        // 2. Add any required command & control acceptors with AddCommandControlAcceptor().
-        // 3. Call Initialize() (one time only) with the command line arguments.
-        // 4. Give the the C&C acceptors run time on the main thread by calling RunCommandControl().
+        // 2. Call Initialize() (one time only) with the command line arguments.
+        // 3. Give the the C&C acceptors run time on the main thread by calling RunCommandControl().
         //    This will return only after the model terminates for the final time.
         // Call sequences of the following to control as needed (typically from within a C&C acceptor)
         //    * RunWithNewModel()
@@ -264,7 +263,8 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         //
-        // After all C&C acceptors are added, initialize with the command line argments.
+        // Initialize with the command line argments.
+        // Command/Control acceptors will be added per the configuration.
         // If a control file was part of the command line, the model will be automatically
         // run with that control file.
         //

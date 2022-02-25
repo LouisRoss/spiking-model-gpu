@@ -1,40 +1,24 @@
 #include <iostream>
 #include <memory>
 #include <exception>
+#include "libsocket/exception.hpp"
 
 #include <cuda_runtime_api.h>
 
-#include "NeuronRecord.h"
-#include "Recorder.h"
 #include "ModelRunner.h"
-#include "ModelEngineContext.h"
-#include "GpuModelCarrier.h"
-#include "GpuModelHelper.h"
-//#include "GpuModelUi.h"
-//#include "ICommandControlAcceptor.h"
-//#include "QueryResponseListenSocket.h"
-#include "CommandControlHandler.h"
+#include "NeuronRecord.h"
 
 using std::cout;
-using std::unique_ptr;
-using std::make_unique;
-using std::function;
 
-using namespace embeddedpenguins::gpu::neuron::model;
-using embeddedpenguins::core::neuron::model::KeyListener;
-using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
-using embeddedpenguins::core::neuron::model::QueryResponseListenSocket;
-using embeddedpenguins::core::neuron::model::CommandControlHandler;
-using embeddedpenguins::gpu::neuron::model::GpuModelCarrier;
-using embeddedpenguins::gpu::neuron::model::GpuModelHelper;
-using embeddedpenguins::gpu::neuron::model::GpuModelUi;
+using libsocket::socket_exception;
 
-int RunServer();
+using embeddedpenguins::gpu::neuron::model::ModelRunner;
+using embeddedpenguins::gpu::neuron::model::NeuronRecord;
 
 
 ///////////////////////////////////////////////////////////////////////////
 //Main program entry.
-//Run the brain map.
+//Run the spiking neural model.
 //
 int main(int argc, char* argv[])
 {
@@ -44,15 +28,7 @@ int main(int argc, char* argv[])
 	}
 
     ModelRunner<NeuronRecord> modelRunner;
-/*
-    modelRunner.AddCommandControlAcceptor(
-        std::move(make_unique<GpuModelUi>(modelRunner))
-    );
 
-    modelRunner.AddCommandControlAcceptor(
-        std::move(make_unique<QueryResponseListenSocket>("0.0.0.0", "8000"))
-    );
-*/
     try
     {
         if (!modelRunner.Initialize(argc, argv))
@@ -60,19 +36,10 @@ int main(int argc, char* argv[])
             cout << "Cannot initialize model: " << modelRunner.Reason() << "\nstopping\n";
             return 1;
         }
-/*
-        if (!modelRunner.ControlFile().empty())
-        {
-            cout << "Model ControlFile not empty, calling modelRunner.RunWithExistingModel()\n";
-            if (!modelRunner.RunWithExistingModel())
-            {
-                cout << "Cannot run model: " << modelRunner.Reason() << "\nstopping\n";
-                return 1;
-            }
-        }
-*/
+
         modelRunner.RunCommandControl();
-    } catch (libsocket::socket_exception ex)
+    }
+    catch (socket_exception ex)
     {
         cout << "Caught exception " << ex.mesg << "\n";
     }

@@ -37,10 +37,6 @@ namespace embeddedpenguins::gpu::neuron::model
         const long long int GetTotalWork() const { return context_.TotalWork; }
         const long long int GetIterations() const { return context_.Iterations; }
         const nanoseconds GetDuration() const { return duration_; }
-        //const string& LogFile() const { return context_.LogFile; }
-        //void LogFile(const string& logfile) { context_.LogFile = logfile; }
-        //const string& RecordFile() const { return context_.RecordFile; }
-        //void RecordFile(const string& recordfile) { context_.RecordFile = recordfile; }
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
         ModelEngineContext& Context() { return context_; }
@@ -51,7 +47,7 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelEngine() = delete;
 
         ModelEngine(GpuModelCarrier& carrier, ConfigurationRepository& configuration, IModelHelper* helper) :
-            context_(configuration/*, helper*/)
+            context_(configuration)
         {
             cout << "\nCreating new ModelEngine\n";
             workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, carrier, helper));
