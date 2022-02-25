@@ -55,6 +55,7 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const string& EngineName() const override { return configuration_.EngineName(); }
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
+        virtual const string GetWiringFilename() const override { return "./wiring.csv"; }
 
         //
         // Unpack needed parameters from the configuration and allocate

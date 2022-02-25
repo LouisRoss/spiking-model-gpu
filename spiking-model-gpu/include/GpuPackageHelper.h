@@ -59,6 +59,35 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
 
+        virtual const string GetWiringFilename() const override
+        {
+            string wiringPath = ".";
+            if (configuration_.Settings().contains("RecordFilePath"))
+            {
+                auto wiringPathJson = configuration_.Settings()["RecordFilePath"];
+                if (wiringPathJson.is_string())
+                    wiringPath = wiringPathJson.get<string>();
+            }
+
+            string wiringFilename;
+
+            if (configuration_.Control().contains("Wiring"))
+            {
+                wiringFilename = configuration_.Control()["Wiring"].get<string>();
+                if (wiringFilename.length() < 4 || wiringFilename.substr(wiringFilename.length()-4, wiringFilename.length()) != ".csv")
+                    wiringFilename += ".csv";
+
+                wiringFilename = wiringPath + "/" + wiringFilename;
+                cout << "Using wiring file " << wiringFilename << "\n";
+            }
+            else
+            {
+                cout << "No wiring file configured, not recording a wiring file\n";
+            }
+
+            return wiringFilename;
+        }
+
         //
         // Unpack needed parameters from the configuration and allocate
         // both CPU and GPU memory necessary to contain the model.

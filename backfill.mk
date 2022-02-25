@@ -14,7 +14,7 @@ COREDIR=../spiking-model-core
 _CORECONFIGS = a1.json bmtk1.json l1.json Anticipate/Anticipate.json Anticipate/I1-I2-N1-N2.json BMTK1/bmtk.json BMTK1/2-5.json Layer/Layer.json Layer/Layer1-5.json
 CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 
-_COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nn.py nntidy.py np.py ns.py
+_COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nnpost.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
 _MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
@@ -91,6 +91,9 @@ $(COREDIR)/ui/nngenlayer.py: spiking-model-gpu//ui/nngenlayer.py
 
 $(COREDIR)/ui/nnplot.py: spiking-model-gpu//ui/nnplot.py
 	cp spiking-model-gpu/ui/nnplot.py $(COREDIR)/ui/
+
+$(COREDIR)/ui/nnpost.py: spiking-model-gpu//ui/nnpost.py
+	cp spiking-model-gpu/ui/nnpost.py $(COREDIR)/ui/
 
 $(COREDIR)/ui/nn.py: spiking-model-gpu//ui/nn.py
 	cp spiking-model-gpu/ui/nn.py $(COREDIR)/ui/
