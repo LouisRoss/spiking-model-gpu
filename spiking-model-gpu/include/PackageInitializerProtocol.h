@@ -100,14 +100,27 @@ namespace embeddedpenguins::core::neuron::model::initializerprotocol
 
     struct ModelExpansionResponse
     {
-        using ConnectionType = unsigned[3];
+        enum class ConnectionType : unsigned short
+        {
+            Excitatory = 0,
+            Inhibitory = 1,
+            Attention = 2
+        };
+
+        struct Connection
+        {
+            unsigned int PreSynapticNeuron;
+            unsigned int PostSynapticNeuron;
+            short int SynapticStrength;
+            ConnectionType Type; 
+        };
 
         unsigned int StartingNeuronOffset { 0 };
         unsigned int NeuronCount { 0 };
         unsigned int ConnectionCount { 0 };
 
         // Immediately following this struct in memory should be an array
-        // ConnectionType Connection[ConnectionCount];
-        ConnectionType* GetConnections() { return (ConnectionType*)(this + 1); }
+        // Connection Connection[ConnectionCount];
+        Connection* GetConnections() { return (Connection*)(this + 1); }
     };
 }

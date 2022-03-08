@@ -40,6 +40,21 @@ int main()
         // The number of SMs.
         cout << "Number of SMs: " << device_prop.multiProcessorCount << "\n";
 
+        // The warp size in threads.
+        cout << "Warp size: " << device_prop.warpSize << " threads\n";
+
+        // Maximum pitch in bytes allowed by memory copies.
+        cout << "Maximum pitch allowed by memory copies: " << device_prop.memPitch << " bytes\n";
+
+        // Maximum number of threads per block.
+        cout << "Maximum number of threads per block: " << device_prop.maxThreadsPerBlock << "\n";
+
+        // Maximum size of each dimension of a block
+        cout << "Maximum size of each dimension of a block: [" << device_prop.maxThreadsDim[0] << "," << device_prop.maxThreadsDim[1] << "," << device_prop.maxThreadsDim[2] << "]\n";
+
+        // Maximum size of each dimension of a grid.
+        cout << "Maximum size of each dimension of a grid: [" << device_prop.maxGridSize[0] << "," << device_prop.maxGridSize[1] << "," << device_prop.maxGridSize[2] << "]\n";
+
         // The frequency.
         cout << "Max clock rate: " << device_prop.clockRate * 1e-6 << "GHz\n";
 

@@ -276,14 +276,6 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             ModelPlasticityShim(carrier_.Device, carrier_.ModelSize());
 
-            // Advance all ticks in the model.
-#ifndef NOLOG
-            context_.Logger.Logger() << "  ModelEngine calling tick kernel\n";
-            context_.Logger.Logit();
-#endif
-            ModelTickShim(carrier_.Device, carrier_.ModelSize());
-            ++context_.Iterations;
-
             // Copy device to host, capture output.
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine recording neurons\n";
@@ -291,8 +283,16 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             outputStreamThread.WaitForPreviousScan();
             cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            //cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
             outputStreamThread.Scan();
+
+            // Advance all ticks in the model.
+#ifndef NOLOG
+            context_.Logger.Logger() << "  ModelEngine calling tick kernel\n";
+            context_.Logger.Logit();
+#endif
+            ModelTickShim(carrier_.Device, carrier_.ModelSize());
+            ++context_.Iterations;
         }
 
         void Cleanup()

@@ -268,9 +268,9 @@ namespace embeddedpenguins::gpu::neuron::model
                     }
                     else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Refractory));
+                        //relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Refractory));
                     }
-                    else if (IsActiveRecently(neuron.TicksSinceLastSpike))
+                    else if (IsInSpikeTime(neuron.TicksSinceLastSpike))
                     {
                         relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Decay));
                     }
@@ -280,7 +280,7 @@ namespace embeddedpenguins::gpu::neuron::model
                         for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
                         {
                             auto& synapse = carrier_.SynapsesHost[neuronIndex][synapseIndex];
-                            if (synapse.TickSinceLastSignal > 0)
+                            if (synapse.Flags & static_cast<unsigned char>(NeuronSynapse::SynapseFlags::AdjustTick) != 0)
                             {
                                 relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, synapseIndex, synapse.Strength, NeuronRecordType::SynapseAdjust));
                             }

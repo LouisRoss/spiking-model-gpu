@@ -27,17 +27,19 @@ namespace embeddedpenguins::gpu::neuron::model
 
     struct NeuronRecord
     {
-        NeuronRecordType Type { NeuronRecordType::Refractory };
-        unsigned long long int NeuronIndex { };
-        int Activation { 0 };
+        NeuronRecordType Type;
+        unsigned long long int NeuronIndex;
+        int Activation;
         vector<NeuronRecordConnection> Connections { };
         NeuronRecordSynapse Synapse { };
 
         NeuronRecord(NeuronRecordType type, unsigned long long int neuronIndex, int activation, unsigned int synapseIndex = 0, const int synapseStrength = 0) :
             Type(type),
             NeuronIndex(neuronIndex),
-            Activation(activation)
+            Activation(activation),
+            Synapse { .SynapseIndex = synapseIndex, .Strength = synapseStrength }
         {
+#if false
             switch (type)
             {
                 case NeuronRecordType::InputSignal:
@@ -64,6 +66,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 default:
                     break;
             }
+#endif
         }
 
         static const string Header()
@@ -81,6 +84,11 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             ostringstream row;
             row << (int)Type << "," << NeuronIndex << "," << Activation << ",";
+            if (Synapse.Strength != 0)
+                row << Synapse.SynapseIndex << ',' << Synapse.Strength;
+            else
+                row << "N/A,N/A";
+#if false
             switch (Type)
             {
                 case NeuronRecordType::InputSignal:
@@ -106,6 +114,7 @@ namespace embeddedpenguins::gpu::neuron::model
                     row << "N/A,N/A";
                     break;
             }
+#endif
 
             return row.str();
         }
