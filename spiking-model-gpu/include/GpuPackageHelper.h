@@ -160,7 +160,7 @@ namespace embeddedpenguins::gpu::neuron::model
             return 0;
         }
 
-        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight) override
+        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight, NeuronType type) override
         {
             if (!carrier_.Valid)
             {
@@ -173,12 +173,12 @@ namespace embeddedpenguins::gpu::neuron::model
             *(unsigned long*)&carrier_.SynapsesHost[sourceNodeIndex][0].PresynapticNeuron = numeric_limits<unsigned long>::max();
             carrier_.SynapsesHost[sourceNodeIndex][0].Strength = synapticWeight;
             carrier_.SynapsesHost[sourceNodeIndex][0].TickSinceLastSignal = 0;
-            carrier_.SynapsesHost[sourceNodeIndex][0].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+            carrier_.SynapsesHost[sourceNodeIndex][0].Type = type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
 
             carrier_.RequiredPostsynapticConnections[sourceNodeIndex]++;
         }
 
-        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight) override
+        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight, NeuronType type) override
         {
             if (!carrier_.Valid)
             {
@@ -194,7 +194,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 *(unsigned long*)&carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].PresynapticNeuron = sourceNodeIndex;
                 carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].Strength = synapticWeight;
                 carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].TickSinceLastSignal = 0;
-                carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+                carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].Type = type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
             }
 
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;

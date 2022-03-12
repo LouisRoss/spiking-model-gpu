@@ -17,6 +17,7 @@ include/*
 spiking-model-gpu/include/ConfigurationRepository.h
 spiking-model-gpu/include/KeyListener.h
 spiking-model-gpu/include/Log.h
+spiking-model-gpu/include/Converters.h
 spiking-model-gpu/include/ModelInitializerProxy.h
 spiking-model-gpu/include/ICommandControlAcceptor.h
 spiking-model-gpu/include/CommandControlListenSocket.h

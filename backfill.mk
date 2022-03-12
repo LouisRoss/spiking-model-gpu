@@ -17,13 +17,13 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nnpost.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h Converters.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELCOMMANDCONTROLS = CommandControlBasicUi.h CommandControlConsoleUi.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h
 MODELCOMMANDCONTROLS = $(patsubst %,$(COREDIR)/include/CommandControlAcceptors/%,$(_MODELCOMMANDCONTROLS))
 
-_MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h ModelPackageInitializer.h PackageInitializerDataSocket.h
+_MODELINITS = IModelInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelLayerInitializer.h ModelLifeInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h ModelPackageInitializer.h PackageInitializerDataSocket.h PackageInitializerProtocol.h
 MODELINITS = $(patsubst %,$(COREDIR)/include/Initializers/%,$(_MODELINITS))
 
 _MODELSENSORS = ISensorInput.h SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h SensorSonataFile.h 
@@ -120,6 +120,9 @@ $(COREDIR)/include/KeyListener.h: spiking-model-gpu/include/KeyListener.h
 $(COREDIR)/include/Log.h: spiking-model-gpu/include/Log.h
 	cp spiking-model-gpu/include/Log.h $(COREDIR)/include/
 
+$(COREDIR)/include/Converters.h: spiking-model-gpu/include/Converters.h
+	cp spiking-model-gpu/include/Converters.h $(COREDIR)/include/
+
 $(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelInitializerProxy.h
 	cp spiking-model-gpu/include/ModelInitializerProxy.h $(COREDIR)/include/
 
@@ -202,6 +205,9 @@ $(COREDIR)/include/Initializers/ModelSonataInitializer.h: spiking-model-gpu/incl
 
 $(COREDIR)/include/Initializers/PackageInitializerDataSocket.h: spiking-model-gpu/include/Initializers/PackageInitializerDataSocket.h
 	cp spiking-model-gpu/include/Initializers/PackageInitializerDataSocket.h $(COREDIR)/include/Initializers/
+
+$(COREDIR)/include/Initializers/PackageInitializerProtocol.h: spiking-model-gpu/include/Initializers/PackageInitializerProtocol.h
+	cp spiking-model-gpu/include/Initializers/PackageInitializerProtocol.h $(COREDIR)/include/Initializers/
 
 $(COREDIR)/include/Initializers/ParticleModelInitializer.h: spiking-model-gpu/include/Initializers/ParticleModelInitializer.h
 	cp spiking-model-gpu/include/Initializers/ParticleModelInitializer.h $(COREDIR)/include/Initializers/

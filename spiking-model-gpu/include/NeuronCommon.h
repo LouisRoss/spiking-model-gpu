@@ -25,8 +25,8 @@ namespace embeddedpenguins::gpu::neuron::model
 
 #define SynapseSignalTimeMax 8
 #define RecoveryTimeMax 50
-#define SpikeDuration 6
-#define RecoverDuration 8
+#define SpikeDuration 5
+#define RecoverDuration 6
 //#define RampdownDuration 60
 
 #define TimeSinceRecovery(_RecoveryTime) ((_RecoveryTime>0)? RecoveryTimeMax-_RecoveryTime: 255)
@@ -35,6 +35,7 @@ namespace embeddedpenguins::gpu::neuron::model
 #define IsInSpikeTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < SpikeDuration)
 //#define IsInRampdownTime(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RampdownDuration)
 #define IsInRecovery(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < RecoverDuration)
+#define IsInSynapticDecrement(_RecoveryTime) (TimeSinceRecovery(_RecoveryTime) < PostsynapticPlasticityPeriod)
 #define IsActiveRecently(_RecoveryTime) ((_RecoveryTime) != 0 && !IsInRecovery(_RecoveryTime))
 
 
