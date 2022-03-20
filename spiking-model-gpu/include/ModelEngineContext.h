@@ -73,18 +73,15 @@ namespace embeddedpenguins::gpu::neuron::model
         bool Initialize()
         {
             // Create and run the model engine.
-            if (!Configuration.Configuration().contains("Model"))
-                return false;
-
-            const json& modelJson = Configuration.Configuration()["Model"];
-            if (!modelJson.is_object())
-                return false;
-
-            if (modelJson.contains("ModelTicks"))
+            if (Configuration.Configuration().contains("Model"))
             {
-                const json& modelTicksJson = modelJson["ModelTicks"];
-                if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
-                    EnginePeriod = microseconds(modelTicksJson.get<int>());
+                const json& modelJson = Configuration.Configuration()["Model"];
+                if (modelJson.is_object() && modelJson.contains("ModelTicks"))
+                {
+                    const json& modelTicksJson = modelJson["ModelTicks"];
+                    if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
+                        EnginePeriod = microseconds(modelTicksJson.get<int>());
+                }
             }
 
             LogFile = Configuration.ExtractRecordDirectory() + LogFile;

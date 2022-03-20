@@ -25,10 +25,10 @@ namespace embeddedpenguins::core::neuron::model
 
         virtual const string& Reason() const = 0;
         virtual ConfigurationRepository& getConfigurationRepository() = 0;
-        virtual const json& Control() const = 0;
-        virtual const json& Configuration() const = 0;
-        virtual const json& Monitor() const = 0;
-        virtual const json& Settings() const = 0;
+        virtual json& Control() = 0;
+        virtual json& Configuration() = 0;
+        virtual json& Monitor() = 0;
+        virtual json& Settings() = 0;
         virtual const unsigned long int ModelSize() const = 0;
         virtual const microseconds EnginePeriod() const = 0;
         virtual const long long int GetTotalWork() const = 0;

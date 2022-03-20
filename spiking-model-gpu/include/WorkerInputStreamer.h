@@ -75,7 +75,7 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         void CreateProxies()
         {
-            cout << "\n*** Creating Spike Input proxies from 'Executiion' section of configuration file\n"; 
+            cout << "\n*** Creating Spike Input proxies from 'Execution' section of configuration file\n"; 
             if (!context_.Configuration.Control().contains("Execution"))
             {
                 cout << "Control contains no 'Execution' element, not creating any input streamers\n";

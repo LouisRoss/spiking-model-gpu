@@ -34,21 +34,21 @@ namespace embeddedpenguins::gpu::neuron::model
     class GpuModelHelper : public IModelHelper
     {
         GpuModelCarrier& carrier_;
-        const ConfigurationRepository& configuration_;
+        ConfigurationRepository& configuration_;
 
         unsigned int width_ { 50 };
         unsigned int height_ { 25 };
         unsigned long long int maxIndex_ { };
 
     public:
-        GpuModelHelper(GpuModelCarrier& carrier, const ConfigurationRepository& configuration) :
+        GpuModelHelper(GpuModelCarrier& carrier, ConfigurationRepository& configuration) :
             carrier_(carrier),
             configuration_(configuration)
         {
         }
 
         // IModelHelper implementation
-        virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual json& Configuration() override { return configuration_.Configuration(); }
         virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
         virtual const string& ModelName() const override { return configuration_.ModelName(); }
         virtual const string& DeploymentName() const override { return configuration_.DeploymentName(); }
@@ -61,7 +61,7 @@ namespace embeddedpenguins::gpu::neuron::model
         // Unpack needed parameters from the configuration and allocate
         // both CPU and GPU memory necessary to contain the model.
         //
-        virtual bool AllocateModel(unsigned long int modelSize = 0) override
+        virtual bool AllocateModel(unsigned long int modelSize) override
         {
             LoadOptionalDimensions();
 
@@ -284,12 +284,15 @@ namespace embeddedpenguins::gpu::neuron::model
             auto size = modelSize;
             if (size == 0)
             {
-                const json& modelJson = configuration_.Configuration()["Model"];
-                if (!modelJson.is_null())
+                if (configuration_.Configuration().contains("Model"))
                 {
-                    const json& modelSizeJson = modelJson["ModelSize"];
-                    if (modelSizeJson.is_number_unsigned())
-                        size = modelSizeJson.get<unsigned int>();
+                    const json& modelJson = configuration_.Configuration()["Model"];
+                    if (modelJson.contains("ModelSize"))
+                    {
+                        const json& modelSizeJson = modelJson["ModelSize"];
+                        if (modelSizeJson.is_number_unsigned())
+                            size = modelSizeJson.get<unsigned int>();
+                    }
                 }
             }
 

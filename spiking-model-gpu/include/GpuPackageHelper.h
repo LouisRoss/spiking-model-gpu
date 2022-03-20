@@ -5,6 +5,7 @@
 #include <string>
 #include <tuple>
 #include <memory>
+#include <filesystem>
 
 #include "libsocket/exception.hpp"
 #include "libsocket/inetclientstream.hpp"
@@ -27,6 +28,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::tuple;
     using std::unique_ptr;
 
+    using std::filesystem::create_directories;
+
     using nlohmann::json;
 
     using embeddedpenguins::core::neuron::model::IModelHelper;
@@ -37,21 +40,21 @@ namespace embeddedpenguins::gpu::neuron::model
     class GpuPackageHelper : public IModelHelper
     {
         GpuModelCarrier& carrier_;
-        const ConfigurationRepository& configuration_;
+        ConfigurationRepository& configuration_;
 
         unsigned int width_ { 50 };
         unsigned int height_ { 25 };
         unsigned long long int maxIndex_ { };
 
     public:
-        GpuPackageHelper(GpuModelCarrier& carrier, const ConfigurationRepository& configuration) :
+        GpuPackageHelper(GpuModelCarrier& carrier, ConfigurationRepository& configuration) :
             carrier_(carrier),
             configuration_(configuration)
         {
         }
 
         // IModelHelper implementation
-        virtual const json& Configuration() const override { return configuration_.Configuration(); }
+        virtual json& Configuration() override { return configuration_.Configuration(); }
         virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
         virtual const string& ModelName() const override { return configuration_.ModelName(); }
         virtual const string& DeploymentName() const override { return configuration_.DeploymentName(); }
@@ -61,29 +64,19 @@ namespace embeddedpenguins::gpu::neuron::model
 
         virtual const string GetWiringFilename() const override
         {
-            string wiringPath = ".";
-            if (configuration_.Settings().contains("RecordFilePath"))
-            {
-                auto wiringPathJson = configuration_.Settings()["RecordFilePath"];
-                if (wiringPathJson.is_string())
-                    wiringPath = wiringPathJson.get<string>();
-            }
+            string wiringPath = configuration_.ExtractRecordDirectory();
 
-            string wiringFilename;
-
+            string wiringFilename { "wiring.csv" };
             if (configuration_.Control().contains("Wiring"))
             {
                 wiringFilename = configuration_.Control()["Wiring"].get<string>();
                 if (wiringFilename.length() < 4 || wiringFilename.substr(wiringFilename.length()-4, wiringFilename.length()) != ".csv")
                     wiringFilename += ".csv";
+            }
 
-                wiringFilename = wiringPath + "/" + wiringFilename;
-                cout << "Using wiring file " << wiringFilename << "\n";
-            }
-            else
-            {
-                cout << "No wiring file configured, not recording a wiring file\n";
-            }
+            create_directories(wiringPath);
+            wiringFilename = wiringPath + wiringFilename;
+            cout << "Using wiring file " << wiringFilename << "\n";
 
             return wiringFilename;
         }
@@ -92,7 +85,7 @@ namespace embeddedpenguins::gpu::neuron::model
         // Unpack needed parameters from the configuration and allocate
         // both CPU and GPU memory necessary to contain the model.
         //
-        virtual bool AllocateModel(unsigned long int modelSize = 0) override
+        virtual bool AllocateModel(unsigned long int modelSize) override
         {
             if (!CreateModel(modelSize))
             {
@@ -311,20 +304,6 @@ namespace embeddedpenguins::gpu::neuron::model
         bool CreateModel(unsigned long int modelSize)
         {
             auto size = modelSize;
-
-            if (size == 0)
-            {
-                PackageInitializerDataSocket socket(configuration_.StackConfiguration());
-                protocol::ModelDescriptorRequest request(configuration_.ModelName());
-
-                auto response = socket.TransactWithServer<protocol::ModelDescriptorRequest, protocol::ModelDescriptorResponse>(request);
-                auto* descriptionResponse = reinterpret_cast<protocol::ModelDescriptorResponse*>(response.get());
-                size = descriptionResponse->NeuronCount;
-                carrier_.ExpansionCount = descriptionResponse->ExpansionCount;
-
-                cout << "ModelPackageHelper retrieved model size from packager of " << size << " neurons and " << descriptionResponse->ExpansionCount << " expansions\n";
-            }
-
             if (size == 0)
             {
                 cout << "No model size configured or supplied, initializer cannot create model\n";

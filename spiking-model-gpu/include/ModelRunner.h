@@ -144,7 +144,7 @@ namespace embeddedpenguins::gpu::neuron::model
             //
             bool AddCommandControlAcceptor(unique_ptr<ICommandControlAcceptor> commandControlAcceptor, int argc, char* argv[])
             {
-                cout << "Parsing arguments for command and control acceptor" << commandControlAcceptor->Description() << "\n"; 
+                cout << "Parsing arguments for command and control acceptor " << commandControlAcceptor->Description() << "\n"; 
                 if (!commandControlAcceptor->ParseArguments(argc, argv))
                 {
                     cout << "Failed parsing arguments for command and control acceptor " << commandControlAcceptor->Description() << "\n";
@@ -213,10 +213,10 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const string& Reason() const override { return reason_; }
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
         virtual ConfigurationRepository& getConfigurationRepository() override { return configuration_; }
-        virtual const json& Control() const override { return configuration_.Control(); }
-        virtual const json& Configuration() const override { return configuration_.Configuration(); }
-        virtual const json& Monitor() const override { return configuration_.Monitor(); }
-        virtual const json& Settings() const override { return configuration_.Settings(); }
+        virtual json& Control() override { return configuration_.Control(); }
+        virtual json& Configuration() override { return configuration_.Configuration(); }
+        virtual json& Monitor() override { return configuration_.Monitor(); }
+        virtual json& Settings() override { return configuration_.Settings(); }
         virtual const unsigned long int ModelSize() const override { return carrier_.ModelSize(); }
         virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }
         virtual microseconds& EnginePeriod() override { return modelEngine_->EnginePeriod(); }
