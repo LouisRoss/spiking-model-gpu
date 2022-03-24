@@ -61,25 +61,7 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const string& EngineName() const override { return configuration_.EngineName(); }
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
-
-        virtual const string GetWiringFilename() const override
-        {
-            string wiringPath = configuration_.ExtractRecordDirectory();
-
-            string wiringFilename { "wiring.csv" };
-            if (configuration_.Control().contains("Wiring"))
-            {
-                wiringFilename = configuration_.Control()["Wiring"].get<string>();
-                if (wiringFilename.length() < 4 || wiringFilename.substr(wiringFilename.length()-4, wiringFilename.length()) != ".csv")
-                    wiringFilename += ".csv";
-            }
-
-            create_directories(wiringPath);
-            wiringFilename = wiringPath + wiringFilename;
-            cout << "Using wiring file " << wiringFilename << "\n";
-
-            return wiringFilename;
-        }
+        virtual const string GetWiringFilename() const override { return configuration_.ComposeWiringCachePath(); }
 
         //
         // Unpack needed parameters from the configuration and allocate

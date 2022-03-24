@@ -301,7 +301,7 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "ModelEngine closing sensor streaming input\n";
             context_.Logger.Logit();
 #endif
-            inputStreamer_.DisconnectInputStream();
+            //inputStreamer_.DisconnectInputStream();
 #ifndef NOLOG
             context_.Logger.Logger() << "ModelEngine sensor streaming input closed\n";
             context_.Logger.Logit();

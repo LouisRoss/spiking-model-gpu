@@ -1,6 +1,7 @@
 {
     "ConfigFilePath": "../config",
-    "RecordFilePath": "../record",
+    "RecordFilePath": "",
+    "RecordFileCachePath": "../record",
     "PythonInterpreter": "python3",
     "DefaultControlFile": "defaultcontrol"
 }

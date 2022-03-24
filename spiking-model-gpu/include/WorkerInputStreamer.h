@@ -61,7 +61,7 @@ namespace embeddedpenguins::gpu::neuron::model
             }
         }
 
-        void DisconnectInputStream()
+        void Cleanup()
         {
             if (!valid_)
                 return;

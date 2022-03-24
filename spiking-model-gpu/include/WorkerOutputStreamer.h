@@ -67,6 +67,17 @@ namespace embeddedpenguins::gpu::neuron::model
             //helper_->PrintMonitoredNeurons();
         }
 
+        void Cleanup()
+        {
+            if (!valid_)
+                return;
+
+            for (auto& spikeOutput : spikeOutputs_)
+            {
+                spikeOutput->Disconnect();
+            }
+        }
+
     private:
         void CreateProxies()
         {
