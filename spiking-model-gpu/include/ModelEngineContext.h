@@ -25,6 +25,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::vector;
     using std::unique_ptr;
     using std::chrono::microseconds;
+    using std::chrono::_V2::system_clock;
+    using std::chrono::high_resolution_clock;
 
     using nlohmann::json;
     
@@ -32,6 +34,21 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::LogLevel;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
     using embeddedpenguins::core::neuron::model::Performance;
+
+    //
+    // During a run, capture the measurements and statistics about that
+    // run here.  This struct can then be copied out to a permanent location
+    // before its containing context is deleted.
+    //
+    struct RunMeasurements
+    {
+        microseconds PartitionTime { };
+        system_clock::time_point EngineStartTime { };
+        system_clock::time_point EngineStopTime { };
+        unsigned long long int Iterations { 1LL };
+        long long int TotalWork { 0LL };
+        Performance PerformanceCounters { };
+    };
 
     //
     // Carry the public information defining the model engine.
@@ -55,14 +72,12 @@ namespace embeddedpenguins::gpu::neuron::model
         microseconds EnginePeriod;
         atomic<bool> EngineInitialized { false };
         atomic<bool> EngineInitializeFailed { false };
-        microseconds PartitionTime { };
-        unsigned long long int Iterations { 1LL };
-        long long int TotalWork { 0LL };
-        Performance PerformanceCounters { };
+        RunMeasurements& Measurements;
 
-        ModelEngineContext(ConfigurationRepository& configuration) :
+        ModelEngineContext(ConfigurationRepository& configuration, RunMeasurements& runMeasurements) :
             Configuration(configuration),
-            EnginePeriod(1000)
+            EnginePeriod(1000),
+            Measurements(runMeasurements)
         {
         }
 
@@ -91,6 +106,23 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         //
+        //  Capture now as the start time.
+        //
+        void TriggerStartTime()
+        {
+            Measurements.EngineStartTime = high_resolution_clock::now();
+            Measurements.Iterations = 0LL;
+        }
+
+        //
+        //  Capture now as the stop time.
+        //
+        void TriggerStopTime()
+        {
+            Measurements.EngineStopTime = high_resolution_clock::now();
+        }
+
+        //
         // Render all the context properties as a single JSON object.
         //
         json Render()
@@ -106,9 +138,9 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"engineperiod", EnginePeriod.count()},
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
-                {"iterations", Iterations},
-                {"totalwork", TotalWork},
-                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
+                {"iterations", Measurements.Iterations},
+                {"totalwork", Measurements.TotalWork},
+                {"cpu", Measurements.PerformanceCounters.GetActiveTotalCpu()}
             };
         }
 
@@ -122,9 +154,9 @@ namespace embeddedpenguins::gpu::neuron::model
                 {"pause", Pause ? true : false},
                 {"engineinit", EngineInitialized ? true : false},
                 {"enginefail", EngineInitializeFailed ? true : false},
-                {"iterations", Iterations},
-                {"totalwork", TotalWork},
-                {"cpu", PerformanceCounters.GetActiveTotalCpu()}
+                {"iterations", Measurements.Iterations},
+                {"totalwork", Measurements.TotalWork},
+                {"cpu", Measurements.PerformanceCounters.GetActiveTotalCpu()}
             };
         }
 
@@ -155,6 +187,11 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     EnginePeriod = microseconds(controlValues["engineperiod"].get<int>());
                     cout << "Changed engine period to " << EnginePeriod.count() << "\n";
+                }
+                if (controlValues.contains("startmeasurement"))
+                {
+                    TriggerStartTime();
+                    cout << "Restarted start time and iterations\n";
                 }
                 // Do more as they come up...
             }

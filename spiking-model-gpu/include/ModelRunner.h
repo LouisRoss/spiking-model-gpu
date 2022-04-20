@@ -16,7 +16,6 @@
 #include "IModelRunner.h"
 #include "IModelHelper.h"
 #include "GpuModelCarrier.h"
-//#include "GpuModelHelper.h"
 #include "GpuPackageHelper.h"
 #include "ModelEngine.h"
 #include "IQueryHandler.h"
@@ -204,6 +203,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         ConfigurationRepository configuration_ {};
         GpuModelCarrier carrier_ {};
+        RunMeasurements runMeasurements_ { };
         unique_ptr<IModelHelper> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
@@ -414,6 +414,20 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         //
+        //  Render the run measurements as the exist instantaneously.
+        // These are initialized automatially in the Run method below.
+        //
+        virtual json RenderRunMeasurements() override
+        {
+            return json {
+                {"enginestarttime", Log::FormatTime(runMeasurements_.EngineStartTime)},
+                {"enginestoptime", Log::FormatTime(runMeasurements_.EngineStopTime)},
+                {"iterations", runMeasurements_.Iterations},
+                {"totalwork", runMeasurements_.TotalWork}
+            };
+        }
+
+        //
         // Accept a JSON object with a collection of name/value pairs
         // and set the value to each named parameter.
         //
@@ -508,10 +522,14 @@ namespace embeddedpenguins::gpu::neuron::model
             // Ensure no model engine, stop and delete first if needed.
             WaitForQuit();
 
+            // Initialize the run measurements values by copying over with a default object.
+            runMeasurements_ = RunMeasurements();
+
             // Create the model engine.
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
                 carrier_, 
                 configuration_,
+                runMeasurements_,
                 helper_.get());
 
             return modelEngine_->Initialize();

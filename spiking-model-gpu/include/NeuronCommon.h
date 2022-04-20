@@ -11,7 +11,7 @@ namespace embeddedpenguins::gpu::neuron::model
 #define BRANCHLESS_CODE
 
 
-    constexpr unsigned int SynapticConnectionsPerNode = 1500;
+    constexpr unsigned int SynapticConnectionsPerNode = 150;
     constexpr unsigned int InputBufferSize = 10'000;
     constexpr unsigned int BlockSizeSynapse = 256;
     constexpr int MaxSynapseStrength = 110;

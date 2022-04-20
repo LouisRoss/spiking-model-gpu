@@ -47,6 +47,7 @@ namespace embeddedpenguins::core::neuron::model
 
         virtual json RenderStatus() = 0;
         virtual json RenderDynamicStatus() = 0;
+        virtual json RenderRunMeasurements() = 0;
         virtual bool SetValue(const json& controlValues) = 0;
         virtual bool DeployModel(const string& modelName, const string& deploymentName, const string& engineName) = 0;
     };

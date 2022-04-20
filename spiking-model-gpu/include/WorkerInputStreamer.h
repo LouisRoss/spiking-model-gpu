@@ -55,7 +55,7 @@ namespace embeddedpenguins::gpu::neuron::model
             streamedInput_.clear();
             for (auto& sensorInput : sensorInputs_)
             {
-                auto& inputs = sensorInput->StreamInput(context_.Iterations);
+                auto& inputs = sensorInput->StreamInput(context_.Measurements.Iterations);
                 streamedInput_.insert(streamedInput_.end(), inputs.begin(), inputs.end());
                 inputs.clear();
             }
@@ -118,7 +118,7 @@ namespace embeddedpenguins::gpu::neuron::model
                         {
                             cout << "Creating input streamer proxy " << inputStreamerLocation << "\n";
                             auto proxy = make_unique<SensorInputProxy>(inputStreamerLocation);
-                            proxy->CreateProxy(context_.Configuration, context_.Iterations, context_.LoggingLevel);
+                            proxy->CreateProxy(context_.Configuration, context_.Measurements.Iterations, context_.LoggingLevel);
 
                             cout << "Connecting input streamer " << inputStreamerLocation << " to '" << inputStreamerConnectionString << "'\n";
                             if (proxy->Connect(inputStreamerConnectionString))

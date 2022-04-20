@@ -34,8 +34,8 @@ namespace embeddedpenguins::gpu::neuron::model
         time_point startTime_ {};
 
     public:
-        const long long int GetTotalWork() const { return context_.TotalWork; }
-        const long long int GetIterations() const { return context_.Iterations; }
+        const long long int GetTotalWork() const { return context_.Measurements.TotalWork; }
+        const long long int GetIterations() const { return context_.Measurements.Iterations; }
         const nanoseconds GetDuration() const { return duration_; }
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
@@ -46,8 +46,8 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, ConfigurationRepository& configuration, IModelHelper* helper) :
-            context_(configuration)
+        ModelEngine(GpuModelCarrier& carrier, ConfigurationRepository& configuration, RunMeasurements& runMeasurements, IModelHelper* helper) :
+            context_(configuration, runMeasurements)
         {
             cout << "\nCreating new ModelEngine\n";
             workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, carrier, helper));
@@ -80,6 +80,7 @@ namespace embeddedpenguins::gpu::neuron::model
             while (!context_.EngineInitialized && !context_.EngineInitializeFailed)
                 std::this_thread::yield();
 
+            context_.TriggerStartTime();
             return context_.EngineInitialized && !context_.EngineInitializeFailed;
         }
 

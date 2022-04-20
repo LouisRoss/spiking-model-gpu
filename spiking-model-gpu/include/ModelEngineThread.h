@@ -108,7 +108,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         unsigned long long int GetIterations()
         {
-            return context_.Iterations;
+            return context_.Measurements.Iterations;
         }
 
     private:
@@ -140,7 +140,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
-            context_.Iterations = 1ULL;
+            context_.Measurements.Iterations = 0ULL;
             context_.EngineInitialized = true;
 
             return true;
@@ -148,7 +148,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void MainLoop()
         {
-            auto engineStartTime = high_resolution_clock::now();
+            context_.TriggerStartTime();
 #ifndef NOLOG
             context_.Logger.Logger() << "ModelEngine starting main loop\n";
             context_.Logger.Logit();
@@ -159,6 +159,7 @@ namespace embeddedpenguins::gpu::neuron::model
             WorkerThread<WorkerOutputStreamer<RECORDTYPE>> outputStreamThread(outputStreamer_);
 
             auto quit {false};
+            nextScheduledTick_ = high_resolution_clock::now();
             do
             {
                 auto needResync { false };
@@ -169,7 +170,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 quit = WaitForWorkOrQuit();
                 if (!quit)
                 {
-                    context_.Logger.Logger() << "ModelEngine executing a model step\n";
+                    context_.Logger.Logger() << "ModelEngine executing a model step " << context_.Measurements.Iterations << "\n";
                     context_.Logger.Logit();
                     ExecuteAStep(inputStreamThread, outputStreamThread);
                     context_.Logger.Logger() << "ModelEngine completed a model step\n";
@@ -177,24 +178,25 @@ namespace embeddedpenguins::gpu::neuron::model
 
                 }
 
-                engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - engineStartTime).count();
+                engineElapsed = duration_cast<microseconds>(high_resolution_clock::now() - context_.Measurements.EngineStartTime).count();
             }
             while (!quit);
 
-            auto partitionElapsed = context_.PartitionTime.count();
+            context_.TriggerStopTime();
+            auto partitionElapsed = context_.Measurements.PartitionTime.count();
 
 #ifndef NOLOG
             context_.Logger.Logger() << "ModelEngine quitting main loop\n";
             context_.Logger.Logit();
 #endif
 
-            double partitionRatio = (double)partitionElapsed / (double)engineElapsed;
+            double usPerTick = (double)engineElapsed / (double)context_.Measurements.Iterations;
             cout 
-                << "Iterations: " << context_.Iterations 
-                << " Total Work: " << context_.TotalWork 
-                << " items  Partition Time: " << partitionElapsed << '/' << engineElapsed << " us = " 
-                << partitionRatio 
-                << "\n";
+                << "Iterations: " << context_.Measurements.Iterations 
+                << " Total Work: " << context_.Measurements.TotalWork 
+                << " items  Partition Time: " << partitionElapsed << '/' << engineElapsed << " tick = " 
+                << usPerTick 
+                << " us\n";
         }
 
         bool WaitForWorkOrQuit()
@@ -283,7 +285,10 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             outputStreamThread.WaitForPreviousScan();
             cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            if (context_.RecordSynapseEnable)
+            {
+                cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            }
             outputStreamThread.Scan();
 
             // Advance all ticks in the model.
@@ -292,7 +297,7 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logit();
 #endif
             ModelTickShim(carrier_.Device, carrier_.ModelSize());
-            ++context_.Iterations;
+            ++context_.Measurements.Iterations;
         }
 
         void Cleanup()
