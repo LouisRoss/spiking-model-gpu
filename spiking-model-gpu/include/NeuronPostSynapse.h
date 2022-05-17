@@ -13,7 +13,7 @@ namespace embeddedpenguins::gpu::neuron::model
         Attention
     };
 
-    struct __align__(8) NeuronSynapse
+    struct __align__(8) NeuronPostSynapse
     {
         enum class SynapseFlags : unsigned char
         {

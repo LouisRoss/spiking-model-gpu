@@ -320,7 +320,7 @@ LIBSOCKETCDIR=../libsocket/C
 IDIR=../../include
 ILDIR=../../../include
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h ConfigurationRepository.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronSynapse.h Converters.h
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h ConfigurationRepository.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronPostSynapse.h Converters.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _INITIALIZERDEPS = IModelInitializer.h ModelPackageInitializer.h ModelAnticipateInitializer.h ModelInitializer.h ModelNeuronInitializer.h ModelSonataInitializer.h ParticleModelInitializer.h PackageInitializerDataSocket.h PackageInitializerProtocol.h
@@ -360,7 +360,7 @@ $(LIBSOCKETODIR)/%.o: $(LIBSOCKETCCDIR)/%.cpp
 $(LIBSOCKETODIR)/libinetsocket.o: $(LIBSOCKETCDIR)/inet/libinetsocket.c
 	make --directory ../libsocket/
 
-$(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronSynapse.h
+$(ODIR)/NeuronModelGpu.o: NeuronModelGpu.cu ../include/NeuronCommon.h ../include/NeuronNode.h ../include/NeuronPostSynapse.h
 	$(EXEC) mkdir -p $(ODIR)
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 

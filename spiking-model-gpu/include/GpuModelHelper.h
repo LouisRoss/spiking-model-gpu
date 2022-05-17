@@ -82,19 +82,20 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
-            cout << "Initializing Neurons and Synapses..." << std::flush;
+            cout << "Model Initializing Neurons and Synapses..." << std::flush;
             for (auto neuronId = 0; neuronId < carrier_.ModelSize(); neuronId++)
             {
                 for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
                 {
-                    *(unsigned long*)&carrier_.SynapsesHost[neuronId][synapseId].PresynapticNeuron = numeric_limits<unsigned long>::max();
-                    carrier_.SynapsesHost[neuronId][synapseId].Strength = 0;
-                    carrier_.SynapsesHost[neuronId][synapseId].TickSinceLastSignal = 0;
-                    carrier_.SynapsesHost[neuronId][synapseId].Type = SynapseType::Excitatory;
+                    *(unsigned long*)&carrier_.PostSynapseHost[neuronId][synapseId].PresynapticNeuron = numeric_limits<unsigned long>::max();
+                    carrier_.PostSynapseHost[neuronId][synapseId].Strength = 0;
+                    carrier_.PostSynapseHost[neuronId][synapseId].TickSinceLastSignal = 0;
+                    carrier_.PostSynapseHost[neuronId][synapseId].Type = SynapseType::Excitatory;
                 }
 
                 carrier_.NeuronsHost[neuronId].Type = NeuronType::Excitatory;
                 carrier_.NeuronsHost[neuronId].NextTickSpike = false;
+                carrier_.NeuronsHost[neuronId].Hypersensitive = 0;
                 carrier_.NeuronsHost[neuronId].Activation = 0;
                 carrier_.NeuronsHost[neuronId].TicksSinceLastSpike = 0;
             }
@@ -115,13 +116,13 @@ namespace embeddedpenguins::gpu::neuron::model
 
         virtual bool IsSynapseUsed(const unsigned long int neuronIndex, const unsigned int synapseId) const override
         {
-            auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
+            auto& synapsesForNeuron = carrier_.PostSynapseHost[neuronIndex];
             return ((unsigned long int*)synapsesForNeuron[synapseId].PresynapticNeuron) != 0;
         }
 
         virtual int GetSynapticStrength(const unsigned long int neuronIndex, const unsigned int synapseId) const override
         {
-            auto& synapsesForNeuron = carrier_.SynapsesHost[neuronIndex];
+            auto& synapsesForNeuron = carrier_.PostSynapseHost[neuronIndex];
             return synapsesForNeuron[synapseId].Strength;
         }
 
@@ -141,10 +142,10 @@ namespace embeddedpenguins::gpu::neuron::model
 
             auto& sourceNode = carrier_.NeuronsHost[sourceNodeIndex];
 
-            *(unsigned long*)&carrier_.SynapsesHost[sourceNodeIndex][0].PresynapticNeuron = numeric_limits<unsigned long>::max();
-            carrier_.SynapsesHost[sourceNodeIndex][0].Strength = synapticWeight;
-            carrier_.SynapsesHost[sourceNodeIndex][0].TickSinceLastSignal = 0;
-            carrier_.SynapsesHost[sourceNodeIndex][0].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+            *(unsigned long*)&carrier_.PostSynapseHost[sourceNodeIndex][0].PresynapticNeuron = numeric_limits<unsigned long>::max();
+            carrier_.PostSynapseHost[sourceNodeIndex][0].Strength = synapticWeight;
+            carrier_.PostSynapseHost[sourceNodeIndex][0].TickSinceLastSignal = 0;
+            carrier_.PostSynapseHost[sourceNodeIndex][0].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
 
             carrier_.RequiredPostsynapticConnections[sourceNodeIndex]++;
         }
@@ -162,10 +163,10 @@ namespace embeddedpenguins::gpu::neuron::model
 
             if (targetSynapseIndex != -1)
             {
-                *(unsigned long*)&carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].PresynapticNeuron = sourceNodeIndex;
-                carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].Strength = synapticWeight;
-                carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].TickSinceLastSignal = 0;
-                carrier_.SynapsesHost[targetNodeIndex][targetSynapseIndex].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+                *(unsigned long*)&carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].PresynapticNeuron = sourceNodeIndex;
+                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Strength = synapticWeight;
+                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].TickSinceLastSignal = 0;
+                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Type = sourceNode.Type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
             }
 
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;
@@ -219,9 +220,9 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 #endif
 
-        virtual vector<tuple<unsigned long long, short int, unsigned short, short int, NeuronRecordType>> CollectRelevantNeurons(bool includeSynapses) override
+        virtual vector<tuple<unsigned long long, short int, short int, unsigned short, short int, NeuronRecordType>> CollectRelevantNeurons(bool includeSynapses, bool includeActivation, bool includeHypersensitive) override
         {
-            vector<tuple<unsigned long long, short int, unsigned short, short int, NeuronRecordType>> relevantNeurons;
+            vector<tuple<unsigned long long, short int, short int, unsigned short, short int, NeuronRecordType>> relevantNeurons;
 
             if (!carrier_.Valid)
             {
@@ -235,7 +236,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
                     if (IsSpikeTick(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Spike));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, neuron.Hypersensitive, 0, 0, NeuronRecordType::Spike));
                     }
                     else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
                     {
@@ -243,17 +244,17 @@ namespace embeddedpenguins::gpu::neuron::model
                     }
                     else if (IsInSpikeTime(neuron.TicksSinceLastSpike))
                     {
-                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Decay));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, neuron.Hypersensitive, 0, 0, NeuronRecordType::Decay));
                     }
 
                     if (includeSynapses)
                     {
                         for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
                         {
-                            auto& synapse = carrier_.SynapsesHost[neuronIndex][synapseIndex];
+                            auto& synapse = carrier_.PostSynapseHost[neuronIndex][synapseIndex];
                             if (synapse.TickSinceLastSignal > 0)
                             {
-                                relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, synapseIndex, synapse.Strength, NeuronRecordType::SynapseAdjust));
+                                relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, neuron.Hypersensitive, synapseIndex, synapse.Strength, NeuronRecordType::SynapseAdjust));
                             }
                         }
                     }
@@ -307,10 +308,12 @@ namespace embeddedpenguins::gpu::neuron::model
 
             carrier_.RequiredPostsynapticConnections = std::make_unique<unsigned long[]>(carrier_.NeuronCount);
             carrier_.NeuronsHost = std::make_unique<NeuronNode[]>(carrier_.NeuronCount);
-            carrier_.SynapsesHost = std::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
+            carrier_.PostSynapseHost = std::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
+            carrier_.PreSynapsesHost = std::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
             carrier_.InputSignalsHost = std::make_unique<unsigned long[]>(InputBufferSize);
             carrier_.NeuronsDevice = cuda::memory::device::make_unique<NeuronNode[]>(carrier_.Device, carrier_.NeuronCount);
-            carrier_.SynapsesDevice = cuda::memory::device::make_unique<NeuronSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
+            carrier_.SynapsesDevice = cuda::memory::device::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
+            carrier_.PreSynapsesDevice = cuda::memory::device::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
             carrier_.InputSignalsDevice = cuda::memory::device::make_unique<unsigned long long[]>(carrier_.Device, InputBufferSize);
 
             carrier_.Valid = true;
@@ -340,7 +343,7 @@ namespace embeddedpenguins::gpu::neuron::model
         {
             for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
             {
-                if (*(unsigned long*)&carrier_.SynapsesHost[targetNodeIndex][synapseId].PresynapticNeuron == numeric_limits<unsigned long>::max())
+                if (*(unsigned long*)&carrier_.PostSynapseHost[targetNodeIndex][synapseId].PresynapticNeuron == numeric_limits<unsigned long>::max())
                     return synapseId;
             }
 

@@ -6,10 +6,12 @@
 #include "cuda.h"
 
 #include "NeuronNode.h"
-#include "NeuronSynapse.h"
+#include "NeuronPostSynapse.h"
+#include "NeuronPreSynapse.h"
 
 using embeddedpenguins::gpu::neuron::model::NeuronNode;
-using embeddedpenguins::gpu::neuron::model::NeuronSynapse;
+using embeddedpenguins::gpu::neuron::model::NeuronPostSynapse;
+using embeddedpenguins::gpu::neuron::model::NeuronPreSynapse;
 using embeddedpenguins::gpu::neuron::model::SynapticConnectionsPerNode;
 
 //
@@ -20,7 +22,8 @@ DeviceFixupShim(
     cuda::device_t& device,
     unsigned long int modelSize,
     NeuronNode neurons[],
-    NeuronSynapse synapses[][SynapticConnectionsPerNode]);
+    NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
+    NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode]);
 
 void
 StreamInputShim(

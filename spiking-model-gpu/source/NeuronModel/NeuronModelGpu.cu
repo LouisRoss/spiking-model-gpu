@@ -3,7 +3,8 @@
 
 #include "NeuronCommon.h"
 #include "NeuronNode.h"
-#include "NeuronSynapse.h"
+#include "NeuronPostSynapse.h"
+#include "NeuronPreSynapse.h"
 
 
 using namespace embeddedpenguins::gpu::neuron::model;
@@ -13,7 +14,8 @@ using namespace embeddedpenguins::gpu::neuron::model;
 //
 __device__ unsigned long int g_modelSize {};
 __device__ NeuronNode* g_pNeurons {};
-__device__ NeuronSynapse (*g_pSynapses)[SynapticConnectionsPerNode] {};
+__device__ NeuronPostSynapse (*g_pPostSynapses)[SynapticConnectionsPerNode] {};
+__device__ NeuronPreSynapse (*g_pPreSynapses)[SynapticConnectionsPerNode] {};
 
 
 __device__ const float PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod] = 
@@ -24,8 +26,21 @@ __device__ const float PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod
   1.115, 1.100, 1.085, 1.085, 1.060, 
   1.030, 1.030, 1.020, 1.010, 1.010 };
 
-__device__ const float PostsynapticDecreaseFunction[PostsynapticPlasticityPeriod] = 
-{ 1.0, 0.95, 0.95, 0.90, 0.85, 0.85, 0.80, 0.75, 0.75, 0.70, 0.65, 0.65, 0.60, 0.55, 0.55, 0.5, 0.58, 0.58, 0.66, 0.74, 0.74, 0.82, 0.89, 0.89, 0.96, 1.0, 1.0, 1.0, 1.0, 1.0 };
+__device__ const float PostsynapticDecreaseFunction[RecoveryTimeMax] = 
+{ 1.0, 0.95, 0.95, 0.90, 0.85,  
+  0.85, 0.80, 0.75, 0.75, 0.70,  
+
+  0.65, 0.65, 0.60, 0.55, 0.55, 
+  0.5, 0.58, 0.58, 0.66, 0.74,  
+
+  0.74, 0.82, 0.89, 0.89, 0.96,  
+  1.0, 1.0, 1.0, 1.0, 1.0,
+
+  1.0, 1.0, 1.0, 1.0, 1.0,
+  1.0, 1.0, 1.0, 1.0, 1.0,
+
+  1.0, 1.0, 1.0, 1.0, 1.0,
+  1.0, 1.0, 1.0, 1.0, 1.0 };
 
 
 
@@ -93,31 +108,45 @@ void
 DeviceFixup(
     unsigned long int modelSize,
     NeuronNode neurons[],
-    NeuronSynapse synapses[][SynapticConnectionsPerNode])
+    NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
+    NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode])
 {
-    auto synapseId = blockIdx.x * blockDim.x + threadIdx.x;
-    auto neuronId = blockIdx.y * blockDim.y + threadIdx.y;
+    g_modelSize = modelSize;
+    g_pNeurons = neurons;
+    g_pPostSynapses = postSynapses;
+    g_pPreSynapses = preSynapses;
 
-	if( synapseId == 0 && neuronId == 0)
-	{
-        g_modelSize = modelSize;
-		g_pNeurons = neurons;
-        g_pSynapses = synapses;
-	}
-
-    NeuronNode* presynapticNeuron = nullptr;
-    unsigned long int presynapticIndex = 0;
-
-    presynapticNeuron = nullptr;
-    presynapticIndex = (unsigned long int)synapses[neuronId][synapseId].PresynapticNeuron;
-    if( (presynapticIndex != UINT_MAX) && (presynapticIndex < modelSize) )
+    for (auto postSynapticNeuronId = 0; postSynapticNeuronId < modelSize; postSynapticNeuronId++)
     {
-        // Normal, replace the index with a pointer.
-        presynapticNeuron = &neurons[presynapticIndex];
+        for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
+        {
+            NeuronNode* presynapticNeuron = nullptr;
+            unsigned long int presynapticIndex = (unsigned long int)postSynapses[postSynapticNeuronId][synapseId].PresynapticNeuron;
+            if(presynapticIndex < modelSize)
+            {
+                // Normal, replace the indexes with a pointers.
+                presynapticNeuron = &neurons[presynapticIndex];
+            }
+        
+            postSynapses[postSynapticNeuronId][synapseId].PresynapticNeuron = presynapticNeuron;
+        }
     }
 
-    // Coalesce memory writes.
-    synapses[neuronId][synapseId].PresynapticNeuron = presynapticNeuron;
+    for (auto preSynapticNeuronId = 0; preSynapticNeuronId < modelSize; preSynapticNeuronId++)
+    {
+        for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
+        {
+            NeuronPostSynapse* postsynapse = nullptr;
+            unsigned long int postsynapticIndex = (unsigned long int)preSynapses[preSynapticNeuronId][synapseId].Postsynapse;
+            if(postsynapticIndex < modelSize)
+            {
+                // Normal, replace the indexes with a pointers.
+                postsynapse = &postSynapses[postsynapticIndex][synapseId];
+            }
+        
+            preSynapses[preSynapticNeuronId][synapseId].Postsynapse = postsynapse;
+        }
+    }
 }
 
 //
@@ -128,7 +157,8 @@ DeviceFixupShim(
     cuda::device_t& device,
     unsigned long int modelSize,
     NeuronNode neurons[],
-    NeuronSynapse synapses[][SynapticConnectionsPerNode])
+    NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
+    NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode])
 {
 	const auto kernel_function = DeviceFixup;
 	cuda::kernel_t kernel(device, kernel_function);
@@ -139,13 +169,13 @@ DeviceFixupShim(
 	auto attributes = kernel.attributes();
 
 	const cuda::grid::dimensions_t grid_dims = {
-		cuda::grid::dimension_t(SynapticConnectionsPerNode),
-		cuda::grid::dimension_t(modelSize),
+		cuda::grid::dimension_t(1),
+		cuda::grid::dimension_t(1),
 		cuda::grid::dimension_t(1)
 	};
     auto launch_configuration = cuda::make_launch_config(grid_dims, 1);
     
-	cuda::launch(kernel_function, launch_configuration, modelSize, neurons, synapses);
+	cuda::launch(kernel_function, launch_configuration, modelSize, neurons, postSynapses, preSynapses);
 	cuda::device::current::get().synchronize();
 }
 
@@ -213,7 +243,7 @@ StreamInputShim(
 // NeuronNode.TicksSinceLastSpike
 // NeuronNode.NextTickSpike
 // NeruonNode.Activation
-// NeuronSynapse.TickSinceLastSignal
+// NeuronPostSynapse.TickSinceLastSignal
 //
 __global__ void ModelSynapses()
 {
@@ -227,10 +257,10 @@ __global__ void ModelSynapses()
         // is past that period, it may integrate new presynaptic spikes.
         if (!IsInRecovery(neuron.TicksSinceLastSpike))
         {
-            short int newActivation = neuron.Activation;
+            short int newActivation = 0;
             for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
             {
-                auto& synapse = g_pSynapses[neuronId][synapseId];
+                auto& synapse = g_pPostSynapses[neuronId][synapseId];
                 auto* presyapticNeuron = synapse.PresynapticNeuron;
 
                 /// if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
@@ -243,15 +273,18 @@ __global__ void ModelSynapses()
                 auto gate = presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime);
                 auto eGate = (synapse.Type == SynapseType::Excitatory);
                 auto iGate = (synapse.Type == SynapseType::Inhibitory);
-                auto nGate = (synapse.Type != SynapseType::Excitatory && synapse.Type != SynapseType::Inhibitory);
-                newActivation += gate * (eGate * synapse.Strength - iGate * synapse.Strength + nGate);
+                auto activationChange = gate * (eGate * synapse.Strength - iGate * synapse.Strength);
+                newActivation += activationChange;
                 synapse.TickSinceLastSignal = gate * PostsynapticPlasticityPeriod + (1 - gate) * synapse.TickSinceLastSignal;
+
+                synapse.Flags &= ~static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
             }
 
-            neuron.Activation = newActivation;
+            neuron.Activation += newActivation;
             //printf("ModelSynapses: Neuron %d got signal from synapse %d with strength %d, changing activation from %d to %d\n", neuronId, synapseId, synapse.Strength, oldActivation, neuron.Activation);
-                
-            if (neuron.Activation > (ActivationThreshold + 1))
+        
+            // In hypersensitive mode, the slightest new activation will trigger a spike, otherwise the total activation must be over threshold.
+            if ( (neuron.Hypersensitive > 0 && newActivation > 0) || neuron.Activation > (ActivationThreshold + 1))
             {
                 //printf("ModelSynapses: Neuron %d above threshold (%d), setting NextTickSpike true, and clamping activation at %d\n", neuronId, neuron.Activation, ActivationThreshold + 1);
                 neuron.NextTickSpike = true;
@@ -268,7 +301,7 @@ __global__ void ModelSynapses()
         {
             for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
             {
-                auto& synapse = g_pSynapses[neuronId][synapseId];
+                auto& synapse = g_pPostSynapses[neuronId][synapseId];
                 auto* presyapticNeuron = synapse.PresynapticNeuron;
 
                 /// if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
@@ -288,7 +321,7 @@ __global__ void ModelSynapses()
                 auto newStrength = multiplier * synapse.Strength;
                 synapse.Strength = newStrength;
                 synapse.TickSinceLastSignal = gate * PostsynapticPlasticityPeriod + (1 - gate) * synapse.TickSinceLastSignal;
-                synapse.Flags |= gate * static_cast<unsigned char>(NeuronSynapse::SynapseFlags::AdjustTick);
+                synapse.Flags |= gate * static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
             }
         }
     }
@@ -398,17 +431,22 @@ __global__ void ModelPlasticity()
         {
             for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
             {
-                auto& synapse = g_pSynapses[neuronId][synapseId];
+                auto& synapse = g_pPostSynapses[neuronId][synapseId];
 
                 if (synapse.TickSinceLastSignal > 0)
                 {
-                    auto newStrength = synapse.Strength * PostsynapticIncreaseFunction[synapse.TickSinceLastSignal - 1];
+                    auto newStrength = synapse.Strength * PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal];
                     if (newStrength > MaxSynapseStrength) newStrength = MaxSynapseStrength;
                     if (newStrength < MinSynapseStrength) newStrength = MinSynapseStrength;
                     //printf("ModelPlasticity: Neuron %d spiked, synapse %d was signaled %d ticks ago, changing synaptic strength from %d to %d\n", neuronId, synapseId, PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal, (int)synapse.Strength, (int)newStrength);
                     synapse.Strength = newStrength;
-                    synapse.Flags |= static_cast<unsigned char>(NeuronSynapse::SynapseFlags::AdjustTick);
+                    synapse.Flags |= static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
                 }
+            }
+
+            if (neuron.Hypersensitive > 0)
+            {
+                neuron.Hypersensitive--;
             }
         }
     }
@@ -445,7 +483,7 @@ ModelPlasticityShim(
 //
 // Modifies:
 // NeuronNode.TicksSinceLastSpike
-// NeuronSynapse.TickSinceLastSignal
+// NeuronPostSynapse.TickSinceLastSignal
 //
 __global__ void ModelTick()
 {
@@ -455,7 +493,6 @@ __global__ void ModelTick()
     if (neuronId < g_modelSize && synapseId < SynapticConnectionsPerNode)
     {
         auto& neuron = g_pNeurons[neuronId];
-        auto& synapse = g_pSynapses[neuronId][synapseId];
 
         if (synapseId == 0 && neuron.TicksSinceLastSpike > 0)
         {
@@ -466,14 +503,21 @@ __global__ void ModelTick()
         
         neuron.NextTickSpike = false;
 
-        if (synapse.TickSinceLastSignal > 0)
+        auto& postsynapse = g_pPostSynapses[neuronId][synapseId];
+        auto& presynapse = g_pPreSynapses[neuronId][synapseId];
+        if (postsynapse.TickSinceLastSignal > 0)
         {
             //auto oldTicks = synapse.TickSinceLastSignal;
-            synapse.TickSinceLastSignal--;
+            postsynapse.TickSinceLastSignal--;
             //printf("ModelTick:   Neuron %d synapse %d ticking TickSinceLastSignal for from %d to %d\n", neuronId, synapseId, oldTicks, synapse.TickSinceLastSignal);
         }
 
-        synapse.Flags &= ~static_cast<unsigned char>(NeuronSynapse::SynapseFlags::AdjustTick);
+        if (presynapse.Postsynapse != nullptr && presynapse.Postsynapse->Flags & static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick))
+        {
+            //printf("Neuron %d being set hypersensitive for the next %d ticks\n", neuronId, HyperSensitivePeriod);
+            neuron.Hypersensitive = HyperSensitivePeriod;
+        }
+        
     }
 }
 

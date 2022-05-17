@@ -122,9 +122,10 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
             cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
-            cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.SynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+            cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.PostSynapseHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse));
+            cuda::memory::copy(carrier_.PreSynapsesDevice.get(), carrier_.PreSynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPreSynapse));
 
-            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get());
+            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get(), carrier_.PreSynapsesDevice.get());
 
             if (!inputStreamer_.Valid())
             {
@@ -287,7 +288,7 @@ namespace embeddedpenguins::gpu::neuron::model
             cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
             if (context_.RecordSynapseEnable)
             {
-                cuda::memory::copy(carrier_.SynapsesHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronSynapse));
+                cuda::memory::copy(carrier_.PostSynapseHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse));
             }
             outputStreamThread.Scan();
 

@@ -61,6 +61,8 @@ namespace embeddedpenguins::gpu::neuron::model
         atomic<bool> Pause { false };
         atomic<bool> RecordEnable { false };
         atomic<bool> RecordSynapseEnable { false };
+        atomic<bool> RecordActivationEnable { false };
+        atomic<bool> RecordHyperSensitiveEnable { false };
         mutex Mutex;
         condition_variable Cv;
 
@@ -177,6 +179,16 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     RecordSynapseEnable = controlValues["recordsynapses"].get<bool>();
                     cout << "Changed record synapse enable to " << RecordSynapseEnable << "\n";
+                }
+                if (controlValues.contains("recordactivation"))
+                {
+                    RecordActivationEnable = controlValues["recordactivation"].get<bool>();
+                    cout << "Changed record activation enable to " << RecordActivationEnable << "\n";
+                }
+                if (controlValues.contains("recordhypersensitive"))
+                {
+                    RecordHyperSensitiveEnable = controlValues["recordhypersensitive"].get<bool>();
+                    cout << "Changed record hypersensitive enable to " << RecordHyperSensitiveEnable << "\n";
                 }
                 if (controlValues.contains("loglevel"))
                 {

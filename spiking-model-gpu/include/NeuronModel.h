@@ -9,7 +9,7 @@
 
 #include "NeuronCommon.h"
 #include "NeuronNode.h"
-#include "NeuronSynapse.h"
+#include "NeuronPostSynapse.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -20,9 +20,9 @@ namespace embeddedpenguins::gpu::neuron::model
         cuda::device_t device_;
 
         std::unique_ptr<NeuronNode[]> neuronsHost_;
-        std::unique_ptr<NeuronSynapse[][SynapticConnectionsPerNode]> synapsesHost_;
+        std::unique_ptr<NeuronPostSynapse[][SynapticConnectionsPerNode]> synapsesHost_;
         cuda::memory::device::unique_ptr<NeuronNode[]> neuronsDevice_;
-        cuda::memory::device::unique_ptr<NeuronSynapse[][SynapticConnectionsPerNode]> synapsesDevice_;
+        cuda::memory::device::unique_ptr<NeuronPostSynapse[][SynapticConnectionsPerNode]> synapsesDevice_;
 
     public:
         NeuronModel(unsigned long int modelSize);

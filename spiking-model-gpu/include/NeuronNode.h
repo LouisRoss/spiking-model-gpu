@@ -11,6 +11,7 @@ namespace embeddedpenguins::gpu::neuron::model
     {
         NeuronType Type;
         bool NextTickSpike;
+        short int Hypersensitive;
         short int Activation;
         unsigned short int TicksSinceLastSpike;
     };

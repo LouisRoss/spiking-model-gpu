@@ -30,13 +30,15 @@ namespace embeddedpenguins::gpu::neuron::model
         NeuronRecordType Type;
         unsigned long long int NeuronIndex;
         int Activation;
+        int Hyperactive;
         vector<NeuronRecordConnection> Connections { };
         NeuronRecordSynapse Synapse { };
 
-        NeuronRecord(NeuronRecordType type, unsigned long long int neuronIndex, int activation, unsigned int synapseIndex = 0, const int synapseStrength = 0) :
+        NeuronRecord(NeuronRecordType type, unsigned long long int neuronIndex, int activation, int hyperactive, unsigned int synapseIndex = 0, const int synapseStrength = 0) :
             Type(type),
             NeuronIndex(neuronIndex),
             Activation(activation),
+            Hyperactive(hyperactive),
             Synapse { .SynapseIndex = synapseIndex, .Strength = synapseStrength }
         {
 #if false
@@ -72,7 +74,7 @@ namespace embeddedpenguins::gpu::neuron::model
         static const string Header()
         {
             ostringstream header;
-            header << "Neuron-Event-Type,Neuron-Index,Neuron-Activation,Synapse-Index,Synapse-Strength";
+            header << "Neuron-Event-Type,Neuron-Index,Neuron-Activation,Hyperactive,Synapse-Index,Synapse-Strength";
 #ifdef ALLCONNECTIONS
             for (auto i = 0; i < PresynapticConnectionsPerNode; i++)
                 header << ",Synapse" << i << "-Signaled" << ",Synapse-" << i << "-Strength";
@@ -83,7 +85,7 @@ namespace embeddedpenguins::gpu::neuron::model
         const string Format()
         {
             ostringstream row;
-            row << (int)Type << "," << NeuronIndex << "," << Activation << ",";
+            row << (int)Type << "," << NeuronIndex << "," << Activation << "," << Hyperactive << ",";
             if (Synapse.Strength != 0)
                 row << Synapse.SynapseIndex << ',' << Synapse.Strength;
             else
