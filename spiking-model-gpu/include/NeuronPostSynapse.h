@@ -34,4 +34,6 @@ namespace embeddedpenguins::gpu::neuron::model
         SynapseType Type;
         unsigned char Flags;
     };
+
+    constexpr unsigned char AdjustTickFlagMask = static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
 }

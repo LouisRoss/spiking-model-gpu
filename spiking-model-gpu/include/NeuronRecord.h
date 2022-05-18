@@ -74,7 +74,7 @@ namespace embeddedpenguins::gpu::neuron::model
         static const string Header()
         {
             ostringstream header;
-            header << "Neuron-Event-Type,Neuron-Index,Neuron-Activation,Hyperactive,Synapse-Index,Synapse-Strength";
+            header << "Neuron-Event-Type,Neuron-Index,Neuron-Activation,Hypersensitive,Synapse-Index,Synapse-Strength";
 #ifdef ALLCONNECTIONS
             for (auto i = 0; i < PresynapticConnectionsPerNode; i++)
                 header << ",Synapse" << i << "-Signaled" << ",Synapse-" << i << "-Strength";

@@ -261,7 +261,7 @@ namespace embeddedpenguins::gpu::neuron::model
                         for (auto synapseIndex = 0; synapseIndex < SynapticConnectionsPerNode; synapseIndex++)
                         {
                             auto& synapse = carrier_.PostSynapseHost[neuronIndex][synapseIndex];
-                            if (synapse.Flags & static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick) != 0)
+                            if (synapse.Flags & AdjustTickFlagMask != 0)
                             {
                                 relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, neuron.Hypersensitive, synapseIndex, synapse.Strength, NeuronRecordType::SynapseAdjust));
                             }

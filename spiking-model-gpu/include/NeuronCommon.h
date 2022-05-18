@@ -11,18 +11,18 @@ namespace embeddedpenguins::gpu::neuron::model
 #define BRANCHLESS_CODE
 
 
-    constexpr unsigned int SynapticConnectionsPerNode = 150;
-    constexpr unsigned int InputBufferSize = 10'000;
-    constexpr unsigned int BlockSizeSynapse = 256;
-    constexpr int MaxSynapseStrength = 110;
-    constexpr int MinSynapseStrength = -110;
-    constexpr int ActivationThreshold = 100;
-    constexpr int PostsynapticPlasticityPeriod = 30;
-    constexpr int SignalDelayTime = 7;
-    constexpr int RefractoryTime = 7;
-    constexpr double DecayRate = 0.80;
-    constexpr int DecayProcessRate = 1;
-    constexpr short int HyperSensitivePeriod = 15;
+constexpr unsigned int SynapticConnectionsPerNode = 150;
+constexpr unsigned int InputBufferSize = 10'000;
+constexpr unsigned int BlockSizeSynapse = 256;
+constexpr int MaxSynapseStrength = 110;
+constexpr int MinSynapseStrength = -110;
+constexpr int ActivationThreshold = 100;
+constexpr int PostsynapticPlasticityPeriod = 30;
+constexpr int SignalDelayTime = 7;
+constexpr int RefractoryTime = 7;
+constexpr double DecayRate = 0.80;
+constexpr int DecayProcessRate = 1;
+constexpr short int HyperSensitivePeriod = 15;
 
 #define SynapseSignalTimeMax 8
 #define RecoveryTimeMax 50
