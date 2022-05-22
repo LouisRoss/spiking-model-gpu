@@ -13,6 +13,7 @@ using namespace embeddedpenguins::gpu::neuron::model;
 // The device model.
 //
 __device__ unsigned long int g_modelSize {};
+__device__ float* g_synapticIncreaseFunction {};
 __device__ NeuronNode* g_pNeurons {};
 __device__ NeuronPostSynapse (*g_pPostSynapses)[SynapticConnectionsPerNode] {};
 __device__ NeuronPreSynapse (*g_pPreSynapses)[SynapticConnectionsPerNode] {};
@@ -107,14 +108,21 @@ __global__
 void
 DeviceFixup(
     unsigned long int modelSize,
+    float postsynapticIncreaseFunction[],
     NeuronNode neurons[],
     NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
     NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode])
 {
     g_modelSize = modelSize;
+    g_synapticIncreaseFunction = postsynapticIncreaseFunction;
     g_pNeurons = neurons;
     g_pPostSynapses = postSynapses;
     g_pPreSynapses = preSynapses;
+
+    for (auto i = 0; i < PostsynapticPlasticityPeriod; i++)
+    {
+        printf("Synapse increase function element %02d = %f\n", i, g_synapticIncreaseFunction[i]);
+    }
 
     for (auto postSynapticNeuronId = 0; postSynapticNeuronId < modelSize; postSynapticNeuronId++)
     {
@@ -156,11 +164,12 @@ void
 DeviceFixupShim(
     cuda::device_t& device,
     unsigned long int modelSize,
+    float postsynapticIncreaseFunction[],
     NeuronNode neurons[],
     NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
     NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode])
 {
-	const auto kernel_function = DeviceFixup;
+    const auto kernel_function = DeviceFixup;
 	cuda::kernel_t kernel(device, kernel_function);
 
 	kernel.set_cache_preference(cuda::multiprocessor_cache_preference_t::prefer_l1_over_shared_memory);
@@ -175,7 +184,7 @@ DeviceFixupShim(
 	};
     auto launch_configuration = cuda::make_launch_config(grid_dims, 1);
     
-	cuda::launch(kernel_function, launch_configuration, modelSize, neurons, postSynapses, preSynapses);
+	cuda::launch(kernel_function, launch_configuration, modelSize, postsynapticIncreaseFunction, neurons, postSynapses, preSynapses);
 	cuda::device::current::get().synchronize();
 }
 
@@ -245,14 +254,14 @@ StreamInputShim(
 // NeruonNode.Activation
 // NeuronPostSynapse.TickSinceLastSignal
 //
-__global__ void ModelSynapsesReference()
+__global__ void ModelSynapses()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
     if (neuronId < g_modelSize)
     {
         auto& neuron = g_pNeurons[neuronId];
 
-        auto isSpikeTick = IsSpikeTick(neuron.TicksSinceLastSpike);
+        //auto isSpikeTick = IsSpikeTick(neuron.TicksSinceLastSpike);
         auto isInRecovery = IsInRecovery(neuron.TicksSinceLastSpike);
         
         short int newActivation = 0;
@@ -261,62 +270,58 @@ __global__ void ModelSynapsesReference()
             auto& synapse = g_pPostSynapses[neuronId][synapseId];
             auto* presyapticNeuron = synapse.PresynapticNeuron;
 
-            if (!isInRecovery)
+            auto gate = presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime);
+            auto eGate = (synapse.Type == SynapseType::Excitatory);
+            auto iGate = (synapse.Type == SynapseType::Inhibitory);
+            auto aGate = (synapse.Type == SynapseType::Attention);
+
+            if (gate)
             {
-                if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
+                if (!isInRecovery)
                 {
-                    if (synapse.Type == SynapseType::Excitatory) newActivation += synapse.Strength;
-                    if (synapse.Type == SynapseType::Inhibitory) newActivation -= synapse.Strength;
-                   
-                    synapse.TickSinceLastSignal = PostsynapticPlasticityPeriod;
+                    if (eGate) newActivation += synapse.Strength;
+                    if (iGate) newActivation -= synapse.Strength;
+                    if (aGate) synapse.Flags |= AdjustTickFlagMask;
                 }
 
-                synapse.Flags &= ~AdjustTickFlagMask;
+                if (isInRecovery)
+                {
+                    if (eGate)
+                    {
+                        synapse.Strength = synapse.Strength * PostsynapticDecreaseFunction[RecoveryTimeMax - neuron.TicksSinceLastSpike];
+                        //synapse.Flags |= AdjustTickFlagMask;
+                    }
+                }
+
+                synapse.TickSinceLastSignal = PostsynapticPlasticityPeriod;
             }
 
             if (isInRecovery)
             {
-                if (presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime))
-                {
-                    if (synapse.Type == SynapseType::Excitatory)
-                    {
-                        auto newStrength = synapse.Strength * PostsynapticDecreaseFunction[RecoveryTimeMax - neuron.TicksSinceLastSpike];
-                        //printf("ModelPlasticity: Synapse %d was signaled after neuron %d spiked %d ticks ago, changing synaptic strength from %d to %d\n", synapseId, neuronId, RecoveryTimeMax - neuron.TicksSinceLastSpike, (int)synapse.Strength, (int)newStrength);
-                        synapse.Strength = newStrength;
-                    }
-                   
-                    synapse.TickSinceLastSignal = PostsynapticPlasticityPeriod;
-                }
-            }
-
-            if (isSpikeTick)
-            {
-                auto gate = presyapticNeuron != nullptr && IsSpikeTick(presyapticNeuron->TicksSinceLastSpike + SignalDelayTime);
-                synapse.Flags |= gate * AdjustTickFlagMask;
+                synapse.Flags &= ~AdjustTickFlagMask;
             }
         }
 
+        neuron.Activation += newActivation;
+
+        auto activationHigh = neuron.Activation > (ActivationThreshold + 1);
+        auto activationLow = neuron.Activation <= -ActivationThreshold;
         if (!isInRecovery)
         {
-            neuron.Activation += newActivation;
-            //printf("ModelSynapses: Neuron %d got signal from synapse %d with strength %d, changing activation from %d to %d\n", neuronId, synapseId, synapse.Strength, oldActivation, neuron.Activation);
-        
             // In hypersensitive mode, the slightest new activation will trigger a spike, otherwise the total activation must be over threshold.
-            if ( (neuron.Hypersensitive > 0 && newActivation > 0) || neuron.Activation > (ActivationThreshold + 1))
+            if ( (neuron.Hypersensitive > 0 && newActivation > 0) || activationHigh)
             {
                 //printf("ModelSynapses: Neuron %d above threshold (%d), setting NextTickSpike true, and clamping activation at %d\n", neuronId, neuron.Activation, ActivationThreshold + 1);
                 neuron.NextTickSpike = true;
-                neuron.Activation = ActivationThreshold + 1;
-            }
-            else if (neuron.Activation <= -ActivationThreshold)
-            {
-                neuron.Activation = -ActivationThreshold;
             }
         }
+
+        if (activationHigh) neuron.Activation = ActivationThreshold + 1;
+        if (activationLow)  neuron.Activation = -ActivationThreshold;
     }
 }
 
-__global__ void ModelSynapses()
+__global__ void ModelSynapsesNobranch()
 {
     auto neuronId = blockIdx.x * blockDim.x + threadIdx.x;
     if (neuronId < g_modelSize)
@@ -357,8 +362,8 @@ __global__ void ModelSynapses()
         auto activationHigh = neuron.Activation > (ActivationThreshold + 1);
         auto needSpikeNextTick = !isInRecovery && ((neuron.Hypersensitive > 0 && newActivation > 0) || activationHigh);
         neuron.NextTickSpike = needSpikeNextTick + (1 - needSpikeNextTick) * neuron.NextTickSpike;
-
         neuron.Activation = (activationHigh * (ActivationThreshold + 1)) + ((1 - activationHigh) * neuron.Activation);
+
         auto activationLow = neuron.Activation <= -ActivationThreshold;
         neuron.Activation = (activationLow * -ActivationThreshold) + ((1 - activationLow) * neuron.Activation);
     }
@@ -555,12 +560,12 @@ __global__ void ModelPlasticity()
 
                 if (synapse.TickSinceLastSignal > 0)
                 {
-                    auto newStrength = synapse.Strength * PostsynapticIncreaseFunction[PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal];
+                    auto newStrength = synapse.Strength * g_synapticIncreaseFunction/*PostsynapticIncreaseFunction*/[PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal];
                     if (newStrength > MaxSynapseStrength) newStrength = MaxSynapseStrength;
                     if (newStrength < MinSynapseStrength) newStrength = MinSynapseStrength;
                     //printf("ModelPlasticity: Neuron %d spiked, synapse %d was signaled %d ticks ago, changing synaptic strength from %d to %d\n", neuronId, synapseId, PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal, (int)synapse.Strength, (int)newStrength);
                     synapse.Strength = newStrength;
-                    synapse.Flags |= static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
+                    synapse.Flags |= AdjustTickFlagMask;
                 }
             }
         }

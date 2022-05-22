@@ -121,11 +121,12 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
+            cuda::memory::copy(carrier_.PostsynapticIncreaseFuncDevice.get(), carrier_.PostsynapticIncreaseFuncHost.get(), PostsynapticPlasticityPeriod * sizeof(float));
             cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
             cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.PostSynapseHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse));
             cuda::memory::copy(carrier_.PreSynapsesDevice.get(), carrier_.PreSynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPreSynapse));
 
-            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get(), carrier_.PreSynapsesDevice.get());
+            DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.PostsynapticIncreaseFuncDevice.get(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get(), carrier_.PreSynapsesDevice.get());
 
             if (!inputStreamer_.Valid())
             {

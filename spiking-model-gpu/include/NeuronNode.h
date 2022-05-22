@@ -9,7 +9,6 @@ namespace embeddedpenguins::gpu::neuron::model
 
     struct NeuronNode
     {
-        NeuronType Type;
         bool NextTickSpike;
         short int Hypersensitive;
         short int Activation;

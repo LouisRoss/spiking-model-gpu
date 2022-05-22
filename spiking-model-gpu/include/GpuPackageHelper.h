@@ -99,7 +99,6 @@ namespace embeddedpenguins::gpu::neuron::model
                     *(unsigned long*)&carrier_.PreSynapsesHost[neuronId][synapseId].Postsynapse = numeric_limits<unsigned long>::max();
                 }
 
-                carrier_.NeuronsHost[neuronId].Type = NeuronType::Excitatory;
                 carrier_.NeuronsHost[neuronId].NextTickSpike = false;
                 carrier_.NeuronsHost[neuronId].Hypersensitive = 0;
                 carrier_.NeuronsHost[neuronId].Activation = 0;
@@ -181,24 +180,9 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;
         }
 
-        virtual NeuronType GetNeuronType(const unsigned long int source) const override
-        {
-            return carrier_.NeuronsHost[source].Type;
-        }
-
         virtual short GetNeuronActivation(const unsigned long int source) const override
         {
             return carrier_.NeuronsHost[source].Activation;
-        }
-
-        virtual void SetExcitatoryNeuronType(const unsigned long int source) override
-        {
-            carrier_.NeuronsHost[source].Type = NeuronType::Excitatory;
-        }
-
-        virtual void SetInhibitoryNeuronType(const unsigned long int source) override
-        {
-            carrier_.NeuronsHost[source].Type = NeuronType::Inhibitory;
         }
 
 #ifdef STREAM_CPU
@@ -312,17 +296,29 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.NeuronCount = size;
 
             carrier_.RequiredPostsynapticConnections = std::make_unique<unsigned long[]>(carrier_.NeuronCount);
+            carrier_.PostsynapticIncreaseFuncHost = std::make_unique<float[]>(PostsynapticPlasticityPeriod);
             carrier_.NeuronsHost = std::make_unique<NeuronNode[]>(carrier_.NeuronCount);
             carrier_.PostSynapseHost = std::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
             carrier_.PreSynapsesHost = std::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
             carrier_.InputSignalsHost = std::make_unique<unsigned long[]>(InputBufferSize);
+            carrier_.PostsynapticIncreaseFuncDevice = cuda::memory::device::make_unique<float[]>(carrier_.Device, PostsynapticPlasticityPeriod);
             carrier_.NeuronsDevice = cuda::memory::device::make_unique<NeuronNode[]>(carrier_.Device, carrier_.NeuronCount);
             carrier_.SynapsesDevice = cuda::memory::device::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
             carrier_.PreSynapsesDevice = cuda::memory::device::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
             carrier_.InputSignalsDevice = cuda::memory::device::make_unique<unsigned long long[]>(carrier_.Device, InputBufferSize);
 
+            GenerateSynapticIncreaseFunction();
+
             carrier_.Valid = true;
             return true;
+        }
+
+        void GenerateSynapticIncreaseFunction()
+        {
+            for (auto synapticDelay = 0; synapticDelay < PostsynapticPlasticityPeriod; synapticDelay++)
+            {
+                carrier_.PostsynapticIncreaseFuncHost[synapticDelay] = 1.0 + exp(-(float(synapticDelay) + 1.0) / 12.0) / 3.0;
+            }
         }
 
         int FindNextUnusedTargetSynapse(unsigned long int targetNodeIndex) const

@@ -21,6 +21,7 @@ void
 DeviceFixupShim(
     cuda::device_t& device,
     unsigned long int modelSize,
+    float postsynapticIncreaseFunction[],
     NeuronNode neurons[],
     NeuronPostSynapse postSynapses[][SynapticConnectionsPerNode],
     NeuronPreSynapse preSynapses[][SynapticConnectionsPerNode]);

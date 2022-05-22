@@ -23,10 +23,12 @@ namespace embeddedpenguins::gpu::neuron::model
         cuda::device_t Device;
 
         std::unique_ptr<unsigned long[]> RequiredPostsynapticConnections { };
+        std::unique_ptr<float[]> PostsynapticIncreaseFuncHost { };
         std::unique_ptr<NeuronNode[]> NeuronsHost { };
         std::unique_ptr<NeuronPostSynapse[][SynapticConnectionsPerNode]> PostSynapseHost { };
         std::unique_ptr<NeuronPreSynapse[][SynapticConnectionsPerNode]> PreSynapsesHost { };
         std::unique_ptr<unsigned long[]> InputSignalsHost { };
+        cuda::memory::device::unique_ptr<float[]> PostsynapticIncreaseFuncDevice { };
         cuda::memory::device::unique_ptr<NeuronNode[]> NeuronsDevice { };
         cuda::memory::device::unique_ptr<NeuronPostSynapse[][SynapticConnectionsPerNode]> SynapsesDevice { };
         cuda::memory::device::unique_ptr<NeuronPreSynapse[][SynapticConnectionsPerNode]> PreSynapsesDevice { };
