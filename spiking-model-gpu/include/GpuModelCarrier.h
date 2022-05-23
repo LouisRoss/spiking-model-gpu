@@ -9,6 +9,7 @@
 #include "NeuronNode.h"
 #include "NeuronPostSynapse.h"
 #include "NeuronPreSynapse.h"
+#include "NeuronCommon.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
