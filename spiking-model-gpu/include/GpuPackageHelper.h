@@ -137,7 +137,7 @@ namespace embeddedpenguins::gpu::neuron::model
             return 0;
         }
 
-        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight, NeuronType type) override
+        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight, SynapseType type) override
         {
             if (!carrier_.Valid)
             {
@@ -150,12 +150,12 @@ namespace embeddedpenguins::gpu::neuron::model
             *(unsigned long*)&carrier_.PostSynapseHost[sourceNodeIndex][0].PresynapticNeuron = numeric_limits<unsigned long>::max();
             carrier_.PostSynapseHost[sourceNodeIndex][0].Strength = synapticWeight;
             carrier_.PostSynapseHost[sourceNodeIndex][0].TickSinceLastSignal = 0;
-            carrier_.PostSynapseHost[sourceNodeIndex][0].Type = type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+            carrier_.PostSynapseHost[sourceNodeIndex][0].Type = type;
 
             carrier_.RequiredPostsynapticConnections[sourceNodeIndex]++;
         }
 
-        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight, NeuronType type) override
+        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight, SynapseType type) override
         {
             if (!carrier_.Valid)
             {
@@ -174,7 +174,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 *(unsigned long*)&carrier_.PreSynapsesHost[sourceNodeIndex][targetSynapseIndex].Postsynapse = targetNodeIndex;
                 carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Strength = synapticWeight;
                 carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].TickSinceLastSignal = 0;
-                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Type = type == NeuronType::Excitatory ? SynapseType::Excitatory : SynapseType::Inhibitory;
+                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Type = type;
             }
 
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;

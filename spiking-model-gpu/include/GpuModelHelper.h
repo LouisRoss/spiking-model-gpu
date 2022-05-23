@@ -131,7 +131,7 @@ namespace embeddedpenguins::gpu::neuron::model
             return 0;
         }
 
-        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight, NeuronType type) override
+        virtual void WireInput(unsigned long int sourceNodeIndex, int synapticWeight, SynapseType type) override
         {
             if (!carrier_.Valid)
             {
@@ -148,7 +148,7 @@ namespace embeddedpenguins::gpu::neuron::model
             carrier_.RequiredPostsynapticConnections[sourceNodeIndex]++;
         }
 
-        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight, NeuronType type) override
+        virtual void Wire(unsigned long int sourceNodeIndex, unsigned long int targetNodeIndex, int synapticWeight, SynapseType type) override
         {
             if (!carrier_.Valid)
             {

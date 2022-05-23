@@ -1,17 +1,13 @@
 #pragma once
 
 #include "NeuronNode.h"
+#include "CoreCommon.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
     using std::numeric_limits;
 
-    enum class SynapseType : char
-    {
-        Excitatory,
-        Inhibitory,
-        Attention
-    };
+    using embeddedpenguins::core::neuron::model::SynapseType;
 
     struct __align__(8) NeuronPostSynapse
     {
