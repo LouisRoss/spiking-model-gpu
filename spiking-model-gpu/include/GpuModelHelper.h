@@ -87,10 +87,14 @@ namespace embeddedpenguins::gpu::neuron::model
             {
                 for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
                 {
+                    carrier_.PostSynapseHost[neuronId][synapseId].Flags = 0;
                     *(unsigned long*)&carrier_.PostSynapseHost[neuronId][synapseId].PresynapticNeuron = numeric_limits<unsigned long>::max();
                     carrier_.PostSynapseHost[neuronId][synapseId].Strength = 0;
                     carrier_.PostSynapseHost[neuronId][synapseId].TickSinceLastSignal = 0;
                     carrier_.PostSynapseHost[neuronId][synapseId].Type = SynapseType::Excitatory;
+
+                    *(unsigned long*)&carrier_.PreSynapsesHost[neuronId][synapseId].Postsynapse = numeric_limits<unsigned long>::max();
+                    carrier_.PreSynapsesHost[neuronId][synapseId].PostSynapseIndex = numeric_limits<unsigned short>::max();
                 }
 
                 carrier_.NeuronsHost[neuronId].NextTickSpike = false;
@@ -156,14 +160,21 @@ namespace embeddedpenguins::gpu::neuron::model
                 return;
             }
 
-            auto& sourceNode = carrier_.NeuronsHost[sourceNodeIndex];
+            auto sourceSynapseIndex = FindNextUnusedSourceSynapse(sourceNodeIndex);
             auto targetSynapseIndex = FindNextUnusedTargetSynapse(targetNodeIndex);
 
-            if (targetSynapseIndex != -1)
+            if (sourceSynapseIndex != -1 && targetSynapseIndex != -1)
             {
+                // Fixup on the GPU side will replace this with a pointer to carrier_.NeuronsDevice[sourceNodeIndex]
                 *(unsigned long*)&carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].PresynapticNeuron = sourceNodeIndex;
+
+                // Fixup on the GPU side will replace these with a pointer to carrier_.PostSynapseDevice[targetNodeIndex][targetSynapseIndex]
+                *(unsigned long*)&carrier_.PreSynapsesHost[sourceNodeIndex][targetSynapseIndex].Postsynapse = targetNodeIndex;
+                carrier_.PreSynapsesHost[sourceNodeIndex][targetSynapseIndex].PostSynapseIndex = targetSynapseIndex;
+
                 carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Strength = synapticWeight;
                 carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].TickSinceLastSignal = 0;
+                carrier_.PostSynapseHost[targetNodeIndex][targetSynapseIndex].Type = type;
             }
 
             carrier_.RequiredPostsynapticConnections[targetNodeIndex]++;
@@ -321,6 +332,17 @@ namespace embeddedpenguins::gpu::neuron::model
             }
 
             maxIndex_ = width_ * height_;
+        }
+
+        int FindNextUnusedSourceSynapse(unsigned long int sourceNodeIndex) const
+        {
+            for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
+            {
+                if (*(unsigned long*)&carrier_.PreSynapsesHost[sourceNodeIndex][synapseId].Postsynapse == numeric_limits<unsigned long>::max())
+                    return synapseId;
+            }
+
+            return -1;
         }
 
         int FindNextUnusedTargetSynapse(unsigned long int targetNodeIndex) const

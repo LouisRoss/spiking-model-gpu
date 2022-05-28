@@ -13,8 +13,8 @@ namespace embeddedpenguins::gpu::neuron::model
     {
         enum class SynapseFlags : unsigned char
         {
-            AdjustTick = 0x1,
-            Spare1     = 0x2,
+            AdjustTick     = 0x1,
+            Hypersensitive = 0x2,
             Spare2     = 0x4,
             Spare3     = 0x8,
             Spare4     = 0x10,
@@ -32,4 +32,5 @@ namespace embeddedpenguins::gpu::neuron::model
     };
 
     constexpr unsigned char AdjustTickFlagMask = static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::AdjustTick);
+    constexpr unsigned char HypersensitiveFlagMask = static_cast<unsigned char>(NeuronPostSynapse::SynapseFlags::Hypersensitive);
 }

@@ -145,11 +145,12 @@ DeviceFixup(
         for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
         {
             NeuronPostSynapse* postsynapse = nullptr;
-            unsigned long int postsynapticIndex = (unsigned long int)preSynapses[preSynapticNeuronId][synapseId].Postsynapse;
-            if(postsynapticIndex < modelSize)
+            unsigned long int postsynapticNeuronIndex = (unsigned long int)preSynapses[preSynapticNeuronId][synapseId].Postsynapse;
+            unsigned short int postsynapticSynapseIndex = preSynapses[preSynapticNeuronId][synapseId].PostSynapseIndex;
+            if(postsynapticNeuronIndex < modelSize && postsynapticSynapseIndex < SynapticConnectionsPerNode)
             {
                 // Normal, replace the indexes with a pointers.
-                postsynapse = &postSynapses[postsynapticIndex][synapseId];
+                postsynapse = &postSynapses[postsynapticNeuronIndex][postsynapticSynapseIndex];
             }
         
             preSynapses[preSynapticNeuronId][synapseId].Postsynapse = postsynapse;
@@ -281,7 +282,7 @@ __global__ void ModelSynapses()
                 {
                     if (eGate) newActivation += synapse.Strength;
                     if (iGate) newActivation -= synapse.Strength;
-                    if (aGate) synapse.Flags |= AdjustTickFlagMask;
+                    if (aGate) neuron.Hypersensitive = HyperSensitivePeriod;
                 }
 
                 if (isInRecovery)
@@ -298,7 +299,7 @@ __global__ void ModelSynapses()
 
             if (isInRecovery)
             {
-                synapse.Flags &= ~AdjustTickFlagMask;
+                synapse.Flags &= ~(AdjustTickFlagMask | HypersensitiveFlagMask);
             }
         }
 
@@ -350,7 +351,7 @@ __global__ void ModelSynapsesNobranch()
             auto strengthDecreased = multiplier < 1;
             synapse.Strength = multiplier * synapse.Strength;
 
-            auto adjustTickOffMask = isInRecovery * AdjustTickFlagMask;
+            auto adjustTickOffMask = (isInRecovery * HypersensitiveFlagMask) | AdjustTickFlagMask;
             auto adjustTickOnMask = strengthDecreased * AdjustTickFlagMask;
             synapse.Flags = synapse.Flags & ~adjustTickOffMask | adjustTickOnMask;
 
@@ -402,7 +403,7 @@ __global__ void ModelSynapsesOld()
                 newActivation += activationChange;
                 synapse.TickSinceLastSignal = gate * PostsynapticPlasticityPeriod + (1 - gate) * synapse.TickSinceLastSignal;
 
-                synapse.Flags &= ~AdjustTickFlagMask;
+                synapse.Flags &= ~(AdjustTickFlagMask | HypersensitiveFlagMask);
             }
 
             neuron.Activation += newActivation;
@@ -552,6 +553,9 @@ __global__ void ModelPlasticity()
     if (neuronId < g_modelSize)
     {
         auto& neuron = g_pNeurons[neuronId];
+        auto neuronHypersensitive = neuron.Hypersensitive > 0;
+        const unsigned char setFlagMask = neuronHypersensitive ? HypersensitiveFlagMask | AdjustTickFlagMask : AdjustTickFlagMask;
+
         if (neuron.NextTickSpike)
         {
             for (auto synapseId = 0; synapseId < SynapticConnectionsPerNode; synapseId++)
@@ -565,12 +569,14 @@ __global__ void ModelPlasticity()
                     if (newStrength < MinSynapseStrength) newStrength = MinSynapseStrength;
                     //printf("ModelPlasticity: Neuron %d spiked, synapse %d was signaled %d ticks ago, changing synaptic strength from %d to %d\n", neuronId, synapseId, PostsynapticPlasticityPeriod - synapse.TickSinceLastSignal, (int)synapse.Strength, (int)newStrength);
                     synapse.Strength = newStrength;
-                    synapse.Flags |= AdjustTickFlagMask;
+
+                    //printf("Setting flags in neuron %d post-synapse %d with flag mask %d\n", neuronId, synapseId, setFlagMask);
+                    synapse.Flags |= setFlagMask;
                 }
             }
         }
 
-        if (neuron.Hypersensitive > 0)
+        if (neuronHypersensitive)
         {
             neuron.Hypersensitive--;
         }
@@ -619,15 +625,18 @@ __global__ void ModelTick()
     {
         auto& neuron = g_pNeurons[neuronId];
 
-        if (synapseId == 0 && neuron.TicksSinceLastSpike > 0)
+        if (synapseId == 0)
         {
-            //auto oldTicks = neuron.TicksSinceLastSpike;
-            neuron.TicksSinceLastSpike--;
-            //printf("ModelTick:   Neuron %d ticking TicksSinceLastSpike for from %d to %d\n", neuronId, oldTicks, neuron.TicksSinceLastSpike);
+            if (neuron.TicksSinceLastSpike > 0)
+            {
+                //auto oldTicks = neuron.TicksSinceLastSpike;
+                neuron.TicksSinceLastSpike--;
+                //printf("ModelTick:   Neuron %d ticking TicksSinceLastSpike for from %d to %d\n", neuronId, oldTicks, neuron.TicksSinceLastSpike);
+            }
+
+            neuron.NextTickSpike = false;
         }
         
-        neuron.NextTickSpike = false;
-
         auto& postsynapse = g_pPostSynapses[neuronId][synapseId];
         auto& presynapse = g_pPreSynapses[neuronId][synapseId];
         if (postsynapse.TickSinceLastSignal > 0)
@@ -637,9 +646,15 @@ __global__ void ModelTick()
             //printf("ModelTick:   Neuron %d synapse %d ticking TickSinceLastSignal for from %d to %d\n", neuronId, synapseId, oldTicks, synapse.TickSinceLastSignal);
         }
 
-        if (presynapse.Postsynapse != nullptr && presynapse.Postsynapse->Flags & AdjustTickFlagMask)
+        const auto flagsMask = AdjustTickFlagMask | HypersensitiveFlagMask;
+        unsigned char postSynapseFlagsMasked = 0;
+        if (presynapse.Postsynapse != nullptr)
         {
-            //printf("Neuron %d being set hypersensitive for the next %d ticks\n", neuronId, HyperSensitivePeriod);
+            postSynapseFlagsMasked = presynapse.Postsynapse->Flags & flagsMask;
+        }
+        if (postSynapseFlagsMasked == flagsMask)
+        {
+            //printf("Neuron %d being set hypersensitive through presynapse %d (%d==%d) for the next %d ticks\n", neuronId, synapseId, (unsigned int)presynapse.Postsynapse->Flags, (unsigned int)(AdjustTickFlagMask | HypersensitiveFlagMask), HyperSensitivePeriod);
             neuron.Hypersensitive = HyperSensitivePeriod;
         }
         

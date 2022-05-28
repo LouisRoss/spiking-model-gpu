@@ -22,7 +22,7 @@ constexpr int SignalDelayTime = 7;
 constexpr int RefractoryTime = 7;
 constexpr double DecayRate = 0.80;
 constexpr int DecayProcessRate = 1;
-constexpr short int HyperSensitivePeriod = 15;
+constexpr short int HyperSensitivePeriod = 30;
 
 #define SynapseSignalTimeMax 8
 #define RecoveryTimeMax 50
