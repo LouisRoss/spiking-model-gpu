@@ -162,7 +162,7 @@ namespace embeddedpenguins::core::neuron::model
             return false;
         }
 
-        virtual void StreamOutput(unsigned long long neuronIndex, short int activation, short int hperactive, unsigned short synapseIndex, short int synapseStrength, NeuronRecordType  type) override
+        virtual void StreamOutput(unsigned long long neuronIndex, short int activation, short int hpersensitive, unsigned short synapseIndex, short int synapseStrength, NeuronRecordType  type) override
         {
             errorReason_.clear();
 
@@ -186,7 +186,7 @@ namespace embeddedpenguins::core::neuron::model
 
             if (spikeOutput_ && valid_)
             {
-                spikeOutput_->StreamOutput(neuronIndex, activation, hperactive, synapseIndex, synapseStrength, type);
+                spikeOutput_->StreamOutput(neuronIndex, activation, hpersensitive, synapseIndex, synapseStrength, type);
                 return;
             }
 
