@@ -1,0 +1,2 @@
+#!/bin/bash
+mount -t nfs -o rw,nolock research3.lan:/mnt/record /mnt/record

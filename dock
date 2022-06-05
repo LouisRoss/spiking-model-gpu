@@ -9,6 +9,6 @@ docker container run \
 --name=spiking-model-gpu \
 -v "$(pwd)":/home/spiking-model-gpu \
 -v "$(pwd)"/../spiking-model-configuration/configuration/:/configuration \
--v /media/louis/seagate8T/record:/record \
+-v /mnt/record:/record \
 louisross/spiking-model-gpu:1.0 \
 bash
