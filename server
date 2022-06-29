@@ -1,0 +1,2 @@
+#!/bin/bash
+tmux new -s server "ssh -t research3.lan 'cd ~/github/spiking-model-selector; ./runserver'"

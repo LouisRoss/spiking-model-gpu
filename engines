@@ -1,0 +1,2 @@
+#!/bin/bash
+tmex engines  -t 11 ./dock "ssh -t research1.lan 'cd ~/github/spiking-model-gpu; tmux new -s research1 ./dock'"

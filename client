@@ -1,0 +1,2 @@
+#!/bin/bash
+tmux new -s client "ssh -t research3.lan 'cd ~/github/spiking-datasets; ./dock'"

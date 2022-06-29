@@ -14,6 +14,7 @@
 
 #include "IModelHelper.h"
 #include "ConfigurationRepository.h"
+#include "ModelMapper.h"
 #include "NeuronRecordCommon.h"
 #include "Initializers/PackageInitializerDataSocket.h"
 
@@ -41,6 +42,7 @@ namespace embeddedpenguins::gpu::neuron::model
     {
         GpuModelCarrier& carrier_;
         ConfigurationRepository& configuration_;
+        ModelMapper expansionMapper_ { };
 
         unsigned int width_ { 50 };
         unsigned int height_ { 25 };
@@ -62,6 +64,17 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const unsigned int Width() const override { return width_; }
         virtual const unsigned int Height() const override { return height_; }
         virtual const string GetWiringFilename() const override { return configuration_.ComposeWiringCachePath(); }
+
+        // ModelMapper wrappers
+        virtual void AddExpansion(unsigned long int start, unsigned long int length) override
+        {
+            expansionMapper_.AddExpansion(start, length);
+        }
+
+        virtual unsigned long int ExpansionOffset(unsigned short int expansionId) const override
+        {
+            return expansionMapper_.ExpansionOffset(expansionId);
+        }
 
         //
         // Unpack needed parameters from the configuration and allocate
