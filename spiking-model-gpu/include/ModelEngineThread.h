@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 #include <chrono>
 #include <memory>
 #include <mutex>
@@ -25,6 +26,7 @@
 namespace embeddedpenguins::gpu::neuron::model
 {
     using std::string;
+    using std::vector;
     using std::unique_ptr;
     using std::make_unique;
     using std::mutex;
@@ -42,6 +44,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using embeddedpenguins::core::neuron::model::Log;
     using embeddedpenguins::core::neuron::model::Recorder;
+    using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
     using embeddedpenguins::core::neuron::model::WorkerThread;
 
@@ -63,6 +66,7 @@ namespace embeddedpenguins::gpu::neuron::model
         time_point nextScheduledTick_;
         WorkerInputStreamer<RECORDTYPE> inputStreamer_;
         WorkerOutputStreamer<RECORDTYPE> outputStreamer_;
+        vector<IModelInitializer::SpikeOutputDescriptor> initializedSpikeOutputs_ {};
 
     public:
         ModelEngineThread() = delete;
@@ -140,6 +144,11 @@ namespace embeddedpenguins::gpu::neuron::model
                 cout << "ModelEngineThread.Initialize failed at outputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
                 return false;
+            }
+
+            for (const auto& spikeOutput: initializedSpikeOutputs_)
+            {
+                outputStreamer_.AddSpikeOutput(spikeOutput);
             }
 
             context_.Measurements.Iterations = 0ULL;
@@ -222,9 +231,12 @@ namespace embeddedpenguins::gpu::neuron::model
             if (context_.Configuration.Control().contains("Execution"))
             {
                 const json& executionJson = context_.Configuration.Control()["Execution"];
-                const json& initializerLocationJson = executionJson["InitializerLocation"];
-                if (initializerLocationJson.is_string())
-                    modelInitializerLocation = initializerLocationJson.get<string>();
+                if (executionJson.contains("InitializerLocation"))
+                {
+                    const json& initializerLocationJson = executionJson["InitializerLocation"];
+                    if (initializerLocationJson.is_string())
+                        modelInitializerLocation = initializerLocationJson.get<string>();
+                }
             }
 
             if (modelInitializerLocation.empty())
@@ -238,7 +250,15 @@ namespace embeddedpenguins::gpu::neuron::model
             initializer.CreateProxy(helper_);
 
             // Let the initializer initialize the model's static state.
-            return initializer.Initialize();
+            auto success = initializer.Initialize();
+
+            initializedSpikeOutputs_.clear();
+            if (success)
+            {
+                initializedSpikeOutputs_ = initializer.GetInitializedOutputs();
+            }
+
+            return success;
         }
 
         void ExecuteAStep(WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,

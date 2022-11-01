@@ -6,6 +6,7 @@
 #include "SpikeOutputProxy.h"
 
 #include "IModelHelper.h"
+#include "Initializers/IModelInitializer.h"
 #include "ModelEngineContext.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -16,6 +17,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::vector;
 
     using embeddedpenguins::core::neuron::model::ISpikeOutput;
+    using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::SpikeOutputProxy;
 
     //
@@ -42,6 +44,11 @@ namespace embeddedpenguins::gpu::neuron::model
             valid_(true)
         {
             CreateProxies();
+        }
+
+        void AddSpikeOutput(const IModelInitializer::SpikeOutputDescriptor& spikeOutput)
+        {
+            CreateInterconnectProxy(spikeOutput);
         }
 
         void Process()
@@ -79,6 +86,73 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
     private:
+        void CreateInterconnectProxy(const IModelInitializer::SpikeOutputDescriptor& spikeOutput)
+        {
+            cout << "\n*** Creating Spike Output interconnect proxies from 'Execution' section of configuration file\n";
+            if (!context_.Configuration.Control().contains("Execution"))
+            {
+                cout << "Control contains no 'Execution' element, not creating any output streamers\n";
+                return;
+            }
+
+            const json& executionJson = context_.Configuration.Control()["Execution"];
+            if (!executionJson.contains("OutputStreamers"))
+            {
+                cout << "Control 'Execution' element contains no 'OutputStreamers' subelement, not creating any output streamers\n";
+                return;
+            }
+
+            const json& outputStreamersJson = executionJson["OutputStreamers"];
+            if (outputStreamersJson.is_array())
+            {
+                for (auto& [key, outputStreamerJson] : outputStreamersJson.items())
+                {
+                    if (outputStreamerJson.is_object())
+                    {
+                        string outputStreamerLocation { "" };
+                        if (outputStreamerJson.contains("Interconnect"))
+                        {
+                            const json& interconnectJson = outputStreamerJson["Interconnect"];
+                            if (interconnectJson.is_string())
+                            {
+                                outputStreamerLocation = interconnectJson.get<string>();
+                            }
+                        }
+
+                        string basePort { "0" };
+                        if (outputStreamerJson.contains("BasePort"))
+                        {
+                            const json& basePortJson = outputStreamerJson["BasePort"];
+                            if (basePortJson.is_number_integer())
+                            {
+                                basePort = basePortJson.get<string>();
+                            }
+                        }
+
+                        if (!outputStreamerLocation.empty())
+                        {
+                            cout << "Creating interconnect output streamer proxy " << outputStreamerLocation << "\n";
+                            auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
+                            proxy->CreateProxy(context_);
+
+                            auto connectionString = spikeOutput.Host + ":" + basePort;
+                            unsigned long localStart = helper_->GetExpansionMap().ExpansionOffset(spikeOutput.LocalModelSequence) + spikeOutput.LocalModelOffset;
+
+                            cout << "Connecting output streamer to " << connectionString << "\n";
+                            if (proxy->Connect(connectionString, localStart, spikeOutput.Size, spikeOutput.ModelSequence, spikeOutput.ModelOffset))
+                                spikeOutputs_.push_back(std::move(proxy));
+                            else
+                                cout << "Unable to connect to interconnect output streamer at " << connectionString << "\n";
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            cout << "***Created " << spikeOutputs_.size() << " spike output proxy objects\n";
+        }
+
         void CreateProxies()
         {
             cout << "\n*** Creating Spike Output proxies from 'Execution' section of configuration file\n";
@@ -114,21 +188,26 @@ namespace embeddedpenguins::gpu::neuron::model
 
                         if (!outputStreamerLocation.empty())
                         {
-                            cout << "Creating output streamer proxy " << outputStreamerLocation << "\n";
-                            auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
-                            proxy->CreateProxy(context_);
-
-                            cout << "Connecting output streamer " << outputStreamerLocation << "'\n";
-                            if (proxy->Connect())
-                                spikeOutputs_.push_back(std::move(proxy));
-                            else
-                                cout << "Unable to connect to output streamer " << outputStreamerLocation << "\n";
+                            CreateProxy(outputStreamerLocation);
                         }
                     }
                 }
             }
 
             cout << "***Created " << spikeOutputs_.size() << " spike output proxy objects\n";
+        }
+
+        void CreateProxy(const string& outputStreamerLocation)
+        {
+            cout << "Creating output streamer proxy " << outputStreamerLocation << "\n";
+            auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
+            proxy->CreateProxy(context_);
+
+            cout << "Connecting output streamer " << outputStreamerLocation << "'\n";
+            if (proxy->Connect())
+                spikeOutputs_.push_back(std::move(proxy));
+            else
+                cout << "Unable to connect to output streamer " << outputStreamerLocation << "\n";
         }
     };
 }

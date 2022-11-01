@@ -17,7 +17,7 @@ CORECONFIGS = $(patsubst %,$(COREDIR)/config/%,$(_CORECONFIGS))
 _COREUIS = Makefile mec.py mem.py mes.py mev.py nnclean.py nngenanticipate.py nngenlayer.py nnplot.py nnpost.py nn.py nntidy.py np.py ns.py
 COREUIS = $(patsubst %,$(COREDIR)/ui/%,$(_COREUIS))
 
-_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h CoreCommon.h Converters.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
+_MODELINCS = ConfigurationRepository.h KeyListener.h Log.h CoreCommon.h Converters.h ModelMapper.h ModelInitializerProxy.h IQueryHandler.h CommandControlHandler.h NeuronRecordCommon.h Recorder.h SensorInputProxy.h SpikeOutputProxy.h Performance.h WorkerThread.h SpikeSignalProtocol.h IModelHelper.h 
 MODELINCS = $(patsubst %,$(COREDIR)/include/%,$(_MODELINCS))
 
 _MODELCOMMANDCONTROLS = CommandControlBasicUi.h CommandControlConsoleUi.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h
@@ -125,6 +125,9 @@ $(COREDIR)/include/CoreCommon.h: spiking-model-gpu/include/CoreCommon.h
 
 $(COREDIR)/include/Converters.h: spiking-model-gpu/include/Converters.h
 	cp spiking-model-gpu/include/Converters.h $(COREDIR)/include/
+
+$(COREDIR)/include/ModelMapper.h: spiking-model-gpu/include/ModelMapper.h
+	cp spiking-model-gpu/include/ModelMapper.h $(COREDIR)/include/
 
 $(COREDIR)/include/ModelInitializerProxy.h: spiking-model-gpu/include/ModelInitializerProxy.h
 	cp spiking-model-gpu/include/ModelInitializerProxy.h $(COREDIR)/include/

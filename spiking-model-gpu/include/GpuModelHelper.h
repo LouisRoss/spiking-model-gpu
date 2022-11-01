@@ -30,6 +30,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::NeuronRecordType;
 
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::ModelMapper;
 
     class GpuModelHelper : public IModelHelper
     {
@@ -183,6 +184,12 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual short GetNeuronActivation(const unsigned long int source) const override
         {
             return carrier_.NeuronsHost[source].Activation;
+        }
+
+        virtual const ModelMapper& GetExpansionMap() const override { return configuration_.ExpansionMap(); }
+        virtual void AddExpansion(const string& engine, unsigned long int start, unsigned long int length) override
+        {
+            configuration_.AddExpansion(engine, start, length);
         }
 
 #ifdef STREAM_CPU
