@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <sstream>
 #include <memory>
 #include <vector>
 
@@ -12,6 +13,7 @@
 namespace embeddedpenguins::gpu::neuron::model
 {
     using std::string;
+    using std::stringstream;
     using std::unique_ptr;
     using std::make_unique;
     using std::vector;
@@ -119,13 +121,13 @@ namespace embeddedpenguins::gpu::neuron::model
                             }
                         }
 
-                        string basePort { "0" };
+                        int basePort { 0 };
                         if (outputStreamerJson.contains("BasePort"))
                         {
                             const json& basePortJson = outputStreamerJson["BasePort"];
                             if (basePortJson.is_number_integer())
                             {
-                                basePort = basePortJson.get<string>();
+                                basePort = basePortJson.get<int>();
                             }
                         }
 
@@ -135,7 +137,10 @@ namespace embeddedpenguins::gpu::neuron::model
                             auto proxy = make_unique<SpikeOutputProxy>(outputStreamerLocation);
                             proxy->CreateProxy(context_);
 
-                            auto connectionString = spikeOutput.Host + ":" + basePort;
+
+                            stringstream ss;
+                            ss << spikeOutput.Host << ":" << basePort;
+                            auto connectionString { ss.str() };
                             unsigned long localStart = helper_->GetExpansionMap().ExpansionOffset(spikeOutput.LocalModelSequence) + spikeOutput.LocalModelOffset;
 
                             cout << "Connecting output streamer to " << connectionString << "\n";
