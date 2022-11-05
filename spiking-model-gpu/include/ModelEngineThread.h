@@ -64,7 +64,7 @@ namespace embeddedpenguins::gpu::neuron::model
         IModelHelper* helper_;
 
         time_point nextScheduledTick_;
-        WorkerInputStreamer<RECORDTYPE> inputStreamer_;
+        WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread_;
         WorkerOutputStreamer<RECORDTYPE> outputStreamer_;
         vector<IModelInitializer::SpikeOutputDescriptor> initializedSpikeOutputs_ {};
 
@@ -73,12 +73,13 @@ namespace embeddedpenguins::gpu::neuron::model
         ModelEngineThread(
                         ModelEngineContext& context, 
                         GpuModelCarrier& carrier,
+                        WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,
                         IModelHelper* helper) :
             context_(context),
             carrier_(carrier),
             helper_(helper),
             nextScheduledTick_(high_resolution_clock::now() + context_.EnginePeriod),
-            inputStreamer_(context_),
+            inputStreamThread_(inputStreamThread),
             outputStreamer_(context_, helper_)
         {
             context_.Logger.SetId(0);
@@ -132,7 +133,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
             DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.PostsynapticIncreaseFuncDevice.get(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get(), carrier_.PreSynapsesDevice.get());
 
-            if (!inputStreamer_.Valid())
+            if (!inputStreamThread_.GetImplementation().Valid())
             {
                 cout << "ModelEngineThread.Initialize failed at inputStreamer_.Valid()\n";
                 context_.EngineInitializeFailed = true;
@@ -146,6 +147,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
+            cout << "\n*** Creating " <<  initializedSpikeOutputs_.size() << " Spike Output interconnect proxies\n";
             for (const auto& spikeOutput: initializedSpikeOutputs_)
             {
                 outputStreamer_.AddSpikeOutput(spikeOutput);
@@ -166,7 +168,6 @@ namespace embeddedpenguins::gpu::neuron::model
 #endif
             long long int engineElapsed;
 
-            WorkerThread<WorkerInputStreamer<RECORDTYPE>> inputStreamThread(inputStreamer_);
             WorkerThread<WorkerOutputStreamer<RECORDTYPE>> outputStreamThread(outputStreamer_);
 
             auto quit {false};
@@ -183,7 +184,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 {
                     context_.Logger.Logger() << "ModelEngine executing a model step " << context_.Measurements.Iterations << "\n";
                     context_.Logger.Logit();
-                    ExecuteAStep(inputStreamThread, outputStreamThread);
+                    ExecuteAStep(inputStreamThread_, outputStreamThread);
                     context_.Logger.Logger() << "ModelEngine completed a model step\n";
                     context_.Logger.Logit();
 
@@ -270,7 +271,7 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logit();
 #endif
             inputStreamThread.WaitForPreviousScan();
-            auto& streamedInput = inputStreamer_.StreamedInput();
+            auto& streamedInput = inputStreamThread_.GetImplementation().StreamedInput();
 #ifdef STREAM_CPU
             helper_->SpikeInputNeurons(streamedInput, context_.Record);
             cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));

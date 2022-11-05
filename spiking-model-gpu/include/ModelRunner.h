@@ -16,7 +16,10 @@
 #include "IModelRunner.h"
 #include "IModelHelper.h"
 #include "GpuModelCarrier.h"
+#include "ModelEngineContext.h"
 #include "GpuPackageHelper.h"
+#include "WorkerInputStreamer.h"
+#include "WorkerThread.h"
 #include "ModelEngine.h"
 #include "IQueryHandler.h"
 #include "CommandControlAcceptors/ICommandControlAcceptor.h"
@@ -47,6 +50,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using embeddedpenguins::core::neuron::model::CommandControlHandler;
     using embeddedpenguins::core::neuron::model::CommandControlBasicUi;
     using embeddedpenguins::core::neuron::model::QueryResponseListenSocket;
+    using embeddedpenguins::core::neuron::model::WorkerThread;
 
     namespace runner
     {
@@ -204,6 +208,9 @@ namespace embeddedpenguins::gpu::neuron::model
         ConfigurationRepository configuration_ {};
         GpuModelCarrier carrier_ {};
         RunMeasurements runMeasurements_ { };
+        ModelEngineContext context_;
+        unique_ptr<WorkerInputStreamer<RECORDTYPE>> inputStreamer_ {};
+        unique_ptr<WorkerThread<WorkerInputStreamer<RECORDTYPE>>> inputStreamThread_ {};
         unique_ptr<IModelHelper> helper_;
         unique_ptr<ModelEngine<RECORDTYPE>> modelEngine_ {};
         vector<unique_ptr<ICommandControlAcceptor>> commandControlAcceptors_ {};
@@ -242,6 +249,7 @@ namespace embeddedpenguins::gpu::neuron::model
         //    * WaitForQuit()
         //
         ModelRunner() :
+            context_(configuration_, runMeasurements_),
             helper_(std::move(GenerateModelHelper()))
         {
             cout << "\n***Creating new model runner with default query handler\n";
@@ -249,6 +257,7 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         ModelRunner(unique_ptr<IQueryHandler> queryHandler) :
+            context_(configuration_, runMeasurements_),
             helper_(std::move(GenerateModelHelper())),
             queryHandler_(std::move(queryHandler))
         {
@@ -285,6 +294,9 @@ namespace embeddedpenguins::gpu::neuron::model
                 initializer.InitializeCommandControlAccpetors(argc, argv);
             }
 
+            inputStreamer_ = make_unique<WorkerInputStreamer<RECORDTYPE>>(context_);
+            inputStreamThread_ = make_unique<WorkerThread<WorkerInputStreamer<RECORDTYPE>>>(*inputStreamer_.get());
+
             cout << "***Model runner initialized into " << (valid_ ? "valid" : "invalid") << " state\n";
             return valid_;
         }
@@ -295,7 +307,7 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         virtual void RunCommandControl() override
         {
-            cout << "\n***Model runner runnning comand and control acceptors\n";
+            cout << "\n***Model runner runnning command and control acceptors\n";
 
             auto quit { false };
             while (!quit)
@@ -527,9 +539,11 @@ namespace embeddedpenguins::gpu::neuron::model
 
             // Create the model engine.
             modelEngine_ = make_unique<ModelEngine<RECORDTYPE>>(
+                context_,
                 carrier_, 
                 configuration_,
                 runMeasurements_,
+                *inputStreamThread_.get(),
                 helper_.get());
 
             return modelEngine_->Initialize();

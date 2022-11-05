@@ -28,7 +28,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class ModelEngine
     {
-        ModelEngineContext context_;
+        ModelEngineContext& context_;
         thread workerThread_;
         nanoseconds duration_ {};
         time_point startTime_ {};
@@ -46,11 +46,16 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngine() = delete;
 
-        ModelEngine(GpuModelCarrier& carrier, ConfigurationRepository& configuration, RunMeasurements& runMeasurements, IModelHelper* helper) :
-            context_(configuration, runMeasurements)
+        ModelEngine(ModelEngineContext& context, 
+                    GpuModelCarrier& carrier, 
+                    ConfigurationRepository& configuration, 
+                    RunMeasurements& runMeasurements, 
+                    WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,
+                    IModelHelper* helper) :
+            context_(context)
         {
             cout << "\nCreating new ModelEngine\n";
-            workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context_, carrier, helper));
+            workerThread_ = thread(ModelEngineThread<RECORDTYPE>(context, carrier, inputStreamThread, helper));
         }
 
         ~ModelEngine()

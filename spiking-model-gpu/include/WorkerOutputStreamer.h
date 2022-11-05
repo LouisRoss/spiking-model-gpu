@@ -90,7 +90,6 @@ namespace embeddedpenguins::gpu::neuron::model
     private:
         void CreateInterconnectProxy(const IModelInitializer::SpikeOutputDescriptor& spikeOutput)
         {
-            cout << "\n*** Creating Spike Output interconnect proxies from 'Execution' section of configuration file\n";
             if (!context_.Configuration.Control().contains("Execution"))
             {
                 cout << "Control contains no 'Execution' element, not creating any output streamers\n";
