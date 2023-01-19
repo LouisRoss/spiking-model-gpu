@@ -9,7 +9,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using embeddedpenguins::core::neuron::model::SynapseType;
 
-    struct __align__(8) NeuronPostSynapse
+    struct __attribute__ ((aligned(8))) NeuronPostSynapse
     {
         enum class SynapseFlags : unsigned char
         {

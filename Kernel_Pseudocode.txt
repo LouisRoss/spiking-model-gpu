@@ -1,0 +1,71 @@
+ExecuteAStep
+
+Copy Input to Device / StreamInput (if input available)
+ModelSynapses
+ModelTimer
+ModelPlasticity
+Copy Output from Device
+ModelTick
+
+StreamInput:    Neurons[inputIndex].NextTickSpike = true; Neurons[inputIndex].Activation = threshold
+
+ModelSynapses:  isInRecovery = isInRecovery(Neurons[*])
+                spikeGate = isSpikeTick(PostSynapses[*][*].PresynapticNeuron)
+                if (spikeGate) {
+                  if (!isInRecovery) {
+                    newActivation += sum(PostSynapses[*][*].Strength)
+                    if (PostSynapses[*][*].Type == Attention) {
+                      Neurons[*].Hypersensitive = HypersensitivePeriod
+                    }
+                  }
+                  if (isInRecovery) {
+                    if (PostSynapses[*][*].Type == Excitatory) {
+                      PostSynapses[*][*].Strength = PostsynapticDecreaseFunction(PostSynapse[*][*].Strength, Neurons[*].TicksSinceLastSpike)
+                    }
+                  }
+                  PostSynapses[*][*].TicksSinceLastSignal = PostsynapticPlasticityPeriod
+                }
+                if (isInRecovery) {
+                  PostSynapses[*][*].Flags &= ~(AdjustTickFlagMask | HypersensitiveFlagMask)
+                }
+                Neurons[*].Activation += newActivation
+                activationHigh = Neurons[*].Activation > (ActivationThreshold + 1)
+                activationLow = Neurons[*].Activation <= -ActivationThreshold
+                if (!isInRecovery) {
+                  if ( (Neurons[*].Hypersensitive > 0 && newActivation > 0) || activationHigh) {
+                    Neurons[*].NextTickSpike = true
+                  }
+                }
+                if (activationHigh) Neurons[*].Activation = ActivationThreshold + 1
+                if (activationLos)  Neurons[*].Activation = -ActivationThreshold
+                
+ModelTimer:     if (Neurons[*].NextTickSpike) {
+                  Neurons[*].TicksSinceLastSpike = RecoveryTimeMax
+                } else {
+                  if (IsRefractoryTick(Neurons[*].TicksSinceLastSpike)) {
+                    Neurons[*].Activation = 0
+                  }
+                  else if (!IsInSpikeTime(Neurons[*].TicksSinceLastSpike)) {
+                    Neurons[*].Activation *= DecayRate
+                  }
+                }
+                
+ModelPlasticity: neuronHypresensitive = Neurons[*].Hypersensitive > 0
+                setFlagMask = neuronHypersensitive ? HypersensitiveFlagMask | AdjustTickFlagMask : AdjustTickFlagMask
+                if (Neurons[*].NextTickSpike) {
+                  if (PostSynapses[*][*].TicksSinceLastSignal > 0) {
+                    PostSynapses[*][*].Strength = SynapticIncreaseFunction(PostSynapses[*][*].Strength, PostSynapses[*][*].TicksSinceLastSignal)
+                    PostSynapses[*][*].Flags |= setFlagMask
+                  }
+                }
+                if (neuronHypersensitive) {
+                  Neurons[*].Hypersensitive--
+                }
+
+Copy Outputs to Host:
+
+ModelTick:      if (Neurons[*].TicksSinceLastSpike > 0) Neurons[*].TicksSinceLastSpike--
+                Neurons[*].NextTickSpike = false
+                if (PostSynapses[*][*].TicksSinceLastSignal > 0) PostSynapses[*][*].TicksSinceLastSignal--
+                flagsMask = AdjustTickFlagMask | HypersensitiveFlagMask
+                if (PreSynapse[*][*].Postsynapse->Flags & flagsMask == flagsMask) Neurons[*].Hypersensitive = HypersensitivePeriod

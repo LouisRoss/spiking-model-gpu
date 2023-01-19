@@ -106,6 +106,32 @@ namespace embeddedpenguins::core::neuron::model
             return false;
         }
 
+        virtual bool Connect(const string& connectionString, unsigned int filterBottom, unsigned int filterLength, unsigned int toIndex, unsigned int toOffset) override
+        {
+            errorReason_.clear();
+
+            if (spikeOutput_ && valid_)
+                return spikeOutput_->Connect(connectionString, filterBottom, filterLength, toIndex, toOffset);
+
+            if (!spikeOutput_)
+            {
+                std::ostringstream os;
+                os << "Error calling Connect(): spike output library " 
+                    << spikeOutputSharedLibraryPath_ << " not loaded";
+                errorReason_ = os.str();
+            }
+
+            if (!valid_)
+            {
+                std::ostringstream os;
+                os << "Error calling Connect(): invalid spike output library " 
+                    << spikeOutputSharedLibraryPath_;
+                errorReason_ = os.str();
+            }
+
+            return false;
+        }
+
         virtual bool Disconnect() override
         {
             errorReason_.clear();

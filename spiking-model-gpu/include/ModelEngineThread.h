@@ -126,12 +126,21 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
+#if CUDA_VERSION < 12000
             cuda::memory::copy(carrier_.PostsynapticIncreaseFuncDevice.get(), carrier_.PostsynapticIncreaseFuncHost.get(), PostsynapticPlasticityPeriod * sizeof(float));
             cuda::memory::copy(carrier_.NeuronsDevice.get(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode));
             cuda::memory::copy(carrier_.SynapsesDevice.get(), carrier_.PostSynapseHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse));
             cuda::memory::copy(carrier_.PreSynapsesDevice.get(), carrier_.PreSynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPreSynapse));
 
             DeviceFixupShim(carrier_.Device, carrier_.ModelSize(), carrier_.PostsynapticIncreaseFuncDevice.get(), carrier_.NeuronsDevice.get(), carrier_.SynapsesDevice.get(), carrier_.PreSynapsesDevice.get());
+#else
+            cudaMemcpy(carrier_.PostsynapticIncreaseFuncDevice(), carrier_.PostsynapticIncreaseFuncHost.get(), PostsynapticPlasticityPeriod * sizeof(float), cudaMemcpyHostToDevice);
+            cudaMemcpy(carrier_.NeuronsDevice(), carrier_.NeuronsHost.get(), carrier_.ModelSize() * sizeof(NeuronNode), cudaMemcpyHostToDevice);
+            cudaMemcpy(carrier_.SynapsesDevice(), carrier_.PostSynapseHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse), cudaMemcpyHostToDevice);
+            cudaMemcpy(carrier_.PreSynapsesDevice(), carrier_.PreSynapsesHost.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPreSynapse), cudaMemcpyHostToDevice);
+
+            DeviceFixupShim(carrier_.ModelSize(), carrier_.PostsynapticIncreaseFuncDevice(), carrier_.NeuronsDevice(), carrier_.SynapsesDevice(), carrier_.PreSynapsesDevice());
+#endif
 
             if (!inputStreamThread_.GetImplementation().Valid())
             {
@@ -278,8 +287,14 @@ namespace embeddedpenguins::gpu::neuron::model
 #else
             if (!streamedInput.empty())
             {
+#if CUDA_VERSION < 12000
                 cuda::memory::copy(carrier_.InputSignalsDevice.get(), &streamedInput[0], streamedInput.size() * sizeof(unsigned long long));
                 StreamInputShim(carrier_.Device, carrier_.ModelSize(), streamedInput.size(), carrier_.InputSignalsDevice.get());
+#else
+                cout << "Copying " << streamedInput.size() << " inputs to CUDA device memory\n";
+                cudaMemcpy(carrier_.InputSignalsDevice(), &streamedInput[0], streamedInput.size() * sizeof(unsigned long long), cudaMemcpyHostToDevice);
+                StreamInputShim(carrier_.ModelSize(), streamedInput.size(), carrier_.InputSignalsDevice());
+#endif
             }
 #endif
             inputStreamThread.Scan();
@@ -289,17 +304,29 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "  ModelEngine calling synapse kernel\n";
             context_.Logger.Logit();
 #endif
+#if CUDA_VERSION < 12000
             ModelSynapsesShim(carrier_.Device, carrier_.ModelSize());
+#else
+            ModelSynapsesShim(carrier_.ModelSize());
+#endif
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine calling timer kernel\n";
             context_.Logger.Logit();
 #endif
+#if CUDA_VERSION < 12000
             ModelTimersShim(carrier_.Device, carrier_.ModelSize());
+#else
+            ModelTimersShim(carrier_.ModelSize());
+#endif
 #ifndef NOLOG
             context_.Logger.Logger() << "  ModelEngine calling plasticity kernel\n";
             context_.Logger.Logit();
 #endif
+#if CUDA_VERSION < 12000
             ModelPlasticityShim(carrier_.Device, carrier_.ModelSize());
+#else
+            ModelPlasticityShim(carrier_.ModelSize());
+#endif
 
             // Copy device to host, capture output.
 #ifndef NOLOG
@@ -307,11 +334,19 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logit();
 #endif
             outputStreamThread.WaitForPreviousScan();
+#if CUDA_VERSION < 12000
             cuda::memory::copy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice.get(), carrier_.ModelSize() * sizeof(NeuronNode));
             if (context_.RecordSynapseEnable)
             {
                 cuda::memory::copy(carrier_.PostSynapseHost.get(), carrier_.SynapsesDevice.get(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse));
             }
+#else
+            cudaMemcpy(carrier_.NeuronsHost.get(), carrier_.NeuronsDevice(), carrier_.ModelSize() * sizeof(NeuronNode), cudaMemcpyDeviceToHost);
+            if (context_.RecordSynapseEnable)
+            {
+                cudaMemcpy(carrier_.PostSynapseHost.get(), carrier_.SynapsesDevice(), carrier_.ModelSize() * SynapticConnectionsPerNode * sizeof(NeuronPostSynapse), cudaMemcpyDeviceToHost);
+            }
+#endif
             outputStreamThread.Scan();
 
             // Advance all ticks in the model.
@@ -319,7 +354,11 @@ namespace embeddedpenguins::gpu::neuron::model
             context_.Logger.Logger() << "  ModelEngine calling tick kernel\n";
             context_.Logger.Logit();
 #endif
+#if CUDA_VERSION < 12000
             ModelTickShim(carrier_.Device, carrier_.ModelSize());
+#else
+            ModelTickShim(carrier_.ModelSize());
+#endif
             ++context_.Measurements.Iterations;
         }
 

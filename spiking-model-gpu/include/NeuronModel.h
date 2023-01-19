@@ -2,7 +2,9 @@
 
 #include <memory>
 
+#if CUDA_VERSION < 12000
 #include <cuda/runtime_api.hpp>
+#endif
 
 #include <cuda_runtime_api.h>
 #include "cuda.h"

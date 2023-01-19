@@ -319,19 +319,7 @@ namespace embeddedpenguins::gpu::neuron::model
                 return false;
             }
 
-            carrier_.NeuronCount = size;
-
-            carrier_.RequiredPostsynapticConnections = std::make_unique<unsigned long[]>(carrier_.NeuronCount);
-            carrier_.PostsynapticIncreaseFuncHost = std::make_unique<float[]>(PostsynapticPlasticityPeriod);
-            carrier_.NeuronsHost = std::make_unique<NeuronNode[]>(carrier_.NeuronCount);
-            carrier_.PostSynapseHost = std::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
-            carrier_.PreSynapsesHost = std::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.NeuronCount);
-            carrier_.InputSignalsHost = std::make_unique<unsigned long[]>(InputBufferSize);
-            carrier_.PostsynapticIncreaseFuncDevice = cuda::memory::device::make_unique<float[]>(carrier_.Device, PostsynapticPlasticityPeriod);
-            carrier_.NeuronsDevice = cuda::memory::device::make_unique<NeuronNode[]>(carrier_.Device, carrier_.NeuronCount);
-            carrier_.SynapsesDevice = cuda::memory::device::make_unique<NeuronPostSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
-            carrier_.PreSynapsesDevice = cuda::memory::device::make_unique<NeuronPreSynapse[][SynapticConnectionsPerNode]>(carrier_.Device, carrier_.NeuronCount);
-            carrier_.InputSignalsDevice = cuda::memory::device::make_unique<unsigned long long[]>(carrier_.Device, InputBufferSize);
+            carrier_.AllocateDevice(size);
 
             GenerateSynapticIncreaseFunction();
 

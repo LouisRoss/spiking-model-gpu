@@ -3,7 +3,10 @@
 #include <exception>
 #include "libsocket/exception.hpp"
 
-#include <cuda_runtime_api.h>
+#include "cuda.h"               // For CUDA_VERSION
+#if CUDA_VERSION < 12000
+#include <cuda_runtime_api.h>       // Fixup after confirming to <cuda/runtime_api.h>
+#endif
 
 #include "ModelRunner.h"
 #include "NeuronRecord.h"
@@ -22,7 +25,13 @@ using embeddedpenguins::gpu::neuron::model::NeuronRecord;
 //
 int main(int argc, char* argv[])
 {
-	if (cuda::device::count() == 0) {
+    int device_count = 0;
+#if CUDA_VERSION < 12000
+    device_count = cuda::device::count();
+#else
+    cudaGetDeviceCount(&device_count);
+#endif
+	if (device_count == 0) {
 		cout << "No CUDA devices on this system\n";
         return -1;
 	}

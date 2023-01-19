@@ -1,0 +1,2 @@
+#!/bin/bash
+docker image build -f Dockerfile_Cuda12 -t louisross/spiking-model-gpu:2.0 .

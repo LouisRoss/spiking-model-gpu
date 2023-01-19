@@ -3,15 +3,40 @@
 // By: Nick from CoffeeBeforeArch
 
 #include <iostream>
+#include <cstring>
 #include <cuda_runtime.h>
 
 using namespace std;
 
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
+void Playground()
+{
+    cudaDeviceProp prop;
+    int device;
+
+    memset(&prop, 0, sizeof(cudaDeviceProp));
+    prop.major = 9;
+    prop.minor = 1;
+    gpuErrchk(cudaChooseDevice(&device, &prop));
+    cout << "Device closest to revision " << prop.major << "." << prop.minor << " is " << device << "\n";
+}
+
 int main()
 {
+    Playground();
+
     // We can get the number of devices in the system.
     int device_count;
-    cudaGetDeviceCount(&device_count);
+    gpuErrchk( cudaGetDeviceCount(&device_count) );
     cout << "There are " << device_count << " GPU(s) in the system\n";
 
     for (int i = 0; i < device_count; i++)

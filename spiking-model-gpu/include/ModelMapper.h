@@ -2,12 +2,14 @@
 
 #include<limits>
 #include <vector>
+#include <string>
 #include <algorithm>
 
-namespace embeddedpenguins::gpu::neuron::model
+namespace embeddedpenguins::core::neuron::model
 {
     using std::vector;
     using std::numeric_limits;
+    using std::string;
 
     //
     // The global model allows for splitting along expansion lines, 
@@ -26,6 +28,10 @@ namespace embeddedpenguins::gpu::neuron::model
         // taking into account the empty expansions.
         struct ExpansionMap
         {
+            //
+            // Host name of the engine assigned this
+            // expansion.  Suitable for a socket connection.
+            string ExpansionEngine {};
             //
             // Starting index within the local model
             // of the first neuron in this expansion.
@@ -46,9 +52,11 @@ namespace embeddedpenguins::gpu::neuron::model
         vector<ExpansionMap> expansionMap_ {};
 
     public:
-        void AddExpansion(unsigned long int start, unsigned long int length)
+        void Reset() { expansionMap_.clear(); }
+        
+        void AddExpansion(const string& engine, unsigned long int start, unsigned long int length)
         {
-            expansionMap_.push_back(ExpansionMap{.ExpansionStart=start, .ExpansionEnd=start+length});
+            expansionMap_.push_back(ExpansionMap{.ExpansionEngine=engine, .ExpansionStart=start, .ExpansionEnd=start+length});
         }
 
         unsigned long int ExpansionOffset(unsigned short int expansionId) const
@@ -57,6 +65,24 @@ namespace embeddedpenguins::gpu::neuron::model
                 return numeric_limits<unsigned long>::max();
 
             return expansionMap_[expansionId].ExpansionStart;
+        }
+
+        unsigned long int ExpansionEnd(unsigned short int expansionId) const
+        {
+            if (expansionId >= expansionMap_.size())
+                return numeric_limits<unsigned long>::max();
+
+            return expansionMap_[expansionId].ExpansionEnd;
+        }
+
+        const string& ExpansionEngine(unsigned short int expansionId) const
+        {
+            static string nullEngine {};
+
+            if (expansionId >= expansionMap_.size())
+                return nullEngine;
+
+            return expansionMap_[expansionId].ExpansionEngine;
         }
     };
 }
