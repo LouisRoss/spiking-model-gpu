@@ -89,18 +89,6 @@ namespace embeddedpenguins::gpu::neuron::model
         //
         bool Initialize()
         {
-            // Create and run the model engine.
-            if (Configuration.Configuration().contains("Model"))
-            {
-                const json& modelJson = Configuration.Configuration()["Model"];
-                if (modelJson.is_object() && modelJson.contains("ModelTicks"))
-                {
-                    const json& modelTicksJson = modelJson["ModelTicks"];
-                    if (modelTicksJson.is_number_integer() || modelTicksJson.is_number_unsigned())
-                        EnginePeriod = microseconds(modelTicksJson.get<int>());
-                }
-            }
-
             LogFile = Configuration.ComposeRecordPathForModel(Configuration.ExtractRecordDirectory(), LogFile);
             cout << "Context initialized with ticks = " << EnginePeriod.count() << " us\n";
 

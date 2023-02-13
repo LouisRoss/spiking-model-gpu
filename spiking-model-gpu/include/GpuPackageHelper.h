@@ -55,7 +55,6 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         // IModelHelper implementation
-        virtual json& Configuration() override { return configuration_.Configuration(); }
         virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
         virtual const string& ModelName() const override { return configuration_.ModelName(); }
         virtual const string& DeploymentName() const override { return configuration_.DeploymentName(); }

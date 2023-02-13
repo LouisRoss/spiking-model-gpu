@@ -49,7 +49,6 @@ namespace embeddedpenguins::gpu::neuron::model
         }
 
         // IModelHelper implementation
-        virtual json& Configuration() override { return configuration_.Configuration(); }
         virtual const json& StackConfiguration() const override { return configuration_.StackConfiguration(); }
         virtual const string& ModelName() const override { return configuration_.ModelName(); }
         virtual const string& DeploymentName() const override { return configuration_.DeploymentName(); }
@@ -283,19 +282,6 @@ namespace embeddedpenguins::gpu::neuron::model
         bool CreateModel(unsigned long int modelSize)
         {
             auto size = modelSize;
-            if (size == 0)
-            {
-                if (configuration_.Configuration().contains("Model"))
-                {
-                    const json& modelJson = configuration_.Configuration()["Model"];
-                    if (modelJson.contains("ModelSize"))
-                    {
-                        const json& modelSizeJson = modelJson["ModelSize"];
-                        if (modelSizeJson.is_number_unsigned())
-                            size = modelSizeJson.get<unsigned int>();
-                    }
-                }
-            }
 
             if (size == 0)
             {
@@ -312,20 +298,6 @@ namespace embeddedpenguins::gpu::neuron::model
 
         void LoadOptionalDimensions()
         {
-            // Override the dimension defaults if configured.
-            const json& configuration = Configuration();
-            auto& modelSection = configuration["Model"];
-            if (!modelSection.is_null() && modelSection.contains("Dimensions"))
-            {
-                auto dimensionElement = modelSection["Dimensions"];
-                if (dimensionElement.is_array())
-                {
-                    auto dimensionArray = dimensionElement.get<std::vector<int>>();
-                    width_ = dimensionArray[0];
-                    height_ = dimensionArray[1];
-                }
-            }
-
             maxIndex_ = width_ * height_;
         }
 

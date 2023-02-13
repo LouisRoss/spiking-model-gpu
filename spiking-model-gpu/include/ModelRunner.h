@@ -221,8 +221,6 @@ namespace embeddedpenguins::gpu::neuron::model
         const ModelEngine<RECORDTYPE>& GetModelEngine() const { return *modelEngine_.get(); }
         virtual ConfigurationRepository& getConfigurationRepository() override { return configuration_; }
         virtual json& Control() override { return configuration_.Control(); }
-        virtual json& Configuration() override { return configuration_.Configuration(); }
-        virtual json& Monitor() override { return configuration_.Monitor(); }
         virtual json& Settings() override { return configuration_.Settings(); }
         virtual const unsigned long int ModelSize() const override { return carrier_.ModelSize(); }
         virtual const microseconds EnginePeriod() const override { return modelEngine_->EnginePeriod(); }

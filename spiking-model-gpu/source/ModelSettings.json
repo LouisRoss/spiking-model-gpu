@@ -1,0 +1,9 @@
+{
+    "ConfigFilePath": "/configuration",
+    "RecordFilePath": "/record/",
+    "RecordFileCachePath": "../record",
+    "PythonInterpreter": "python3",
+    "DefaultControlFile": "defaultcontrol",
+    "DefaultStackConfigurationFile": "configuration",
+    "DefaultRecordFile": "ModelEngineRecord.csv"
+}

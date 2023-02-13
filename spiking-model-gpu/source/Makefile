@@ -1,6 +1,8 @@
 DEBUGFLAG=
+BDIR=../bin
 
 all:
+	cp -u ModelSettings.json $(BDIR)
 	make --directory=NeuronModel DEBUGFLAG="$(DEBUGFLAG)"
 	make --directory=Initializers DEBUGFLAG="$(DEBUGFLAG)"
 	make --directory=SensorInputs DEBUGFLAG="$(DEBUGFLAG)"
