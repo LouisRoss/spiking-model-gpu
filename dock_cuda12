@@ -1,4 +1,5 @@
 #!/bin/bash
+sudo mount -t nfs -o rw,nolock research3.lan:/mnt/record /mnt/record
 echo $(pwd)
 docker container run \
 --gpus all \

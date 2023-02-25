@@ -258,7 +258,7 @@ namespace embeddedpenguins::gpu::neuron::model
                     }
                     else if (IsRefractoryTick(neuron.TicksSinceLastSpike))
                     {
-                        //relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, 0, 0, NeuronRecordType::Refractory));
+                        relevantNeurons.push_back(std::make_tuple(neuronIndex, neuron.Activation, neuron.Hypersensitive, 0, 0, NeuronRecordType::Refractory));
                     }
                     else if (IsInSpikeTime(neuron.TicksSinceLastSpike))
                     {
