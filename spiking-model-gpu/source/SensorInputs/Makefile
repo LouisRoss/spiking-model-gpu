@@ -17,7 +17,7 @@ LDIR=../../lib
 LIBS= -ldl -lhdf5_serial -ltbb
 
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h ConfigurationRepository.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronPostSynapse.h SpikeSignalProtocol.h 
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h ModelMapper.h onfigurationRepository.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronPostSynapse.h SpikeSignalProtocol.h 
 DEPS = $(patsubst %,$(ILDIR)/%,$(_DEPS))
 
 _SENSORINPUTDEPS = ISensorInput.h  SensorInputFile.h SensorInputSocket.h SensorInputListenSocket.h SensorInputDataSocket.h  SensorSonataFile.h 
