@@ -16,7 +16,7 @@ LDIR=../../lib
 LIBS= -ldl -ltbb
 
 
-_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelEngineContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronPostSynapse.h SpikeSignalProtocol.h Recorder.h 
+_DEPS = CudaApi.h GpuModelCarrier.h GpuModelHelper.h ModelContext.h ModelEngine.h ModelEngineThread.h ModelRunner.h NeuronCommon.h NeuronModel.h NeuronNode.h NeuronRecord.h NeuronPostSynapse.h SpikeSignalProtocol.h Recorder.h 
 DEPS = $(patsubst %,$(ILDIR)/%,$(_DEPS))
 
 _COMMANDCONTROLDEPS = CommandControlBasicUi.h CommandControlConsoleUi.h GpuModelUi.h ICommandControlAcceptor.h QueryResponseListenSocket.h QueryResponseSocket.h 

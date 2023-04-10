@@ -37,3 +37,4 @@ spiking-model-gpu/include/IQueryHandler.h
 spiking-model-gpu/include/QueryResponseListenSocket.h
 spiking-model-gpu/include/Performance.h
 spiking-model-gpu/include/WorkerThread.h
+spiking-model-gpu/include/ModelContext.h

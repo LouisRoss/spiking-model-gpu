@@ -8,7 +8,7 @@
 
 #include "IModelHelper.h"
 #include "Initializers/IModelInitializer.h"
-#include "ModelEngineContext.h"
+#include "ModelContext.h"
 
 namespace embeddedpenguins::gpu::neuron::model
 {
@@ -18,6 +18,7 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::make_unique;
     using std::vector;
 
+    using embeddedpenguins::core::neuron::model::ModelContext;
     using embeddedpenguins::core::neuron::model::ISpikeOutput;
     using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::SpikeOutputProxy;
@@ -31,7 +32,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class WorkerOutputStreamer
     {
-        ModelEngineContext& context_;
+        ModelContext& context_;
         vector<unique_ptr<ISpikeOutput>> spikeOutputs_ {};
         IModelHelper* helper_;
         bool valid_;
@@ -40,7 +41,7 @@ namespace embeddedpenguins::gpu::neuron::model
         const bool Valid() const { return valid_; }
 
     public:
-        WorkerOutputStreamer(ModelEngineContext& context, IModelHelper* helper) :
+        WorkerOutputStreamer(ModelContext& context, IModelHelper* helper) :
             context_(context),
             helper_(helper),
             valid_(true)

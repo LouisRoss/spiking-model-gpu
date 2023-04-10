@@ -16,7 +16,7 @@
 #include "IModelRunner.h"
 #include "IModelHelper.h"
 #include "GpuModelCarrier.h"
-#include "ModelEngineContext.h"
+#include "ModelContext.h"
 #include "GpuPackageHelper.h"
 #include "WorkerInputStreamer.h"
 #include "WorkerThread.h"
@@ -44,6 +44,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using embeddedpenguins::core::neuron::model::IModelRunner;
     using embeddedpenguins::core::neuron::model::ConfigurationRepository;
+    using embeddedpenguins::core::neuron::model::ModelContext;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
     using embeddedpenguins::core::neuron::model::ICommandControlAcceptor;
     using embeddedpenguins::core::neuron::model::IQueryHandler;
@@ -208,7 +209,7 @@ namespace embeddedpenguins::gpu::neuron::model
         ConfigurationRepository configuration_ {};
         GpuModelCarrier carrier_ {};
         RunMeasurements runMeasurements_ { };
-        ModelEngineContext context_;
+        ModelContext context_;
         unique_ptr<WorkerInputStreamer<RECORDTYPE>> inputStreamer_ {};
         unique_ptr<WorkerThread<WorkerInputStreamer<RECORDTYPE>>> inputStreamThread_ {};
         unique_ptr<IModelHelper> helper_;
@@ -228,7 +229,7 @@ namespace embeddedpenguins::gpu::neuron::model
         virtual const long long int GetTotalWork() const override { return modelEngine_->GetTotalWork(); }
         virtual const long long int GetIterations() const override { return modelEngine_->GetIterations(); }
         virtual IModelHelper* Helper() const override { return helper_.get(); }
-        ModelEngineContext& Context() const { return modelEngine_->Context(); }
+        ModelContext& Context() const { return modelEngine_->Context(); }
         GpuModelCarrier& Carrier() { return carrier_; }
 
     public:

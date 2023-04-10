@@ -5,7 +5,7 @@
 
 #include "IModelHelper.h"
 #include "ConfigurationRepository.h"
-#include "ModelEngineContext.h"
+#include "ModelContext.h"
 #include "ModelEngineThread.h"
 #include "GpuModelCarrier.h"
 
@@ -18,6 +18,8 @@ namespace embeddedpenguins::gpu::neuron::model
     using std::chrono::high_resolution_clock;
     using time_point = std::chrono::high_resolution_clock::time_point;
 
+    using embeddedpenguins::core::neuron::model::ModelContext;
+    using embeddedpenguins::core::neuron::model::RunMeasurements;
     //
     // The top-level control engine for running a model.
     // Create and run a single thread, which will create N worker objects, each
@@ -28,7 +30,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class ModelEngine
     {
-        ModelEngineContext& context_;
+        ModelContext& context_;
         thread workerThread_;
         nanoseconds duration_ {};
         time_point startTime_ {};
@@ -39,14 +41,14 @@ namespace embeddedpenguins::gpu::neuron::model
         const nanoseconds GetDuration() const { return duration_; }
         const microseconds EnginePeriod() const { return context_.EnginePeriod; }
         microseconds& EnginePeriod() { return context_.EnginePeriod; }
-        ModelEngineContext& Context() { return context_; }
+        ModelContext& Context() { return context_; }
         void Pause() { context_.Pause = true; }
         void Continue() { context_.Pause = false; }
 
     public:
         ModelEngine() = delete;
 
-        ModelEngine(ModelEngineContext& context, 
+        ModelEngine(ModelContext& context, 
                     GpuModelCarrier& carrier, 
                     ConfigurationRepository& configuration, 
                     RunMeasurements& runMeasurements, 

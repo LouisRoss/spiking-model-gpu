@@ -20,7 +20,7 @@
 #include "WorkerThread.h"
 
 #include "IModelHelper.h"
-#include "ModelEngineContext.h"
+#include "ModelContext.h"
 #include "GpuModelCarrier.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -44,6 +44,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using embeddedpenguins::core::neuron::model::Log;
     using embeddedpenguins::core::neuron::model::Recorder;
+    using embeddedpenguins::core::neuron::model::ModelContext;
     using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::ModelInitializerProxy;
     using embeddedpenguins::core::neuron::model::WorkerThread;
@@ -59,7 +60,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class ModelEngineThread
     {
-        ModelEngineContext& context_;
+        ModelContext& context_;
         GpuModelCarrier& carrier_;
         IModelHelper* helper_;
 
@@ -71,7 +72,7 @@ namespace embeddedpenguins::gpu::neuron::model
     public:
         ModelEngineThread() = delete;
         ModelEngineThread(
-                        ModelEngineContext& context, 
+                        ModelContext& context, 
                         GpuModelCarrier& carrier,
                         WorkerThread<WorkerInputStreamer<RECORDTYPE>>& inputStreamThread,
                         IModelHelper* helper) :
@@ -257,7 +258,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
             // Create the proxy with a two-step ctor-create sequence.
             ModelInitializerProxy initializer(modelInitializerLocation);
-            initializer.CreateProxy(helper_);
+            initializer.CreateProxy(helper_, &context_);
 
             // Let the initializer initialize the model's static state.
             auto success = initializer.Initialize();

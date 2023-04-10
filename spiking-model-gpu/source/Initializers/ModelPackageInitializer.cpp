@@ -6,14 +6,15 @@
 
 namespace embeddedpenguins::gpu::neuron::model
 {
+    using embeddedpenguins::core::neuron::model::ModelContext;
     using embeddedpenguins::core::neuron::model::IModelHelper;
     using embeddedpenguins::core::neuron::model::IModelInitializer;
     using embeddedpenguins::core::neuron::model::ModelPackageInitializer;
 
     // the class factories
 
-    extern "C" IModelInitializer* create(IModelHelper* helper) {
-        return new ModelPackageInitializer(helper);
+    extern "C" IModelInitializer* create(IModelHelper* helper, ModelContext* context) {
+        return new ModelPackageInitializer(helper, context);
     }
 
     extern "C" void destroy(IModelInitializer* p) {

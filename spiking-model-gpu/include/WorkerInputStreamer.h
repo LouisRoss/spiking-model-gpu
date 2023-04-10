@@ -6,7 +6,7 @@
 
 #include "nlohmann/json.hpp"
 
-#include "ModelEngineContext.h"
+#include "ModelContext.h"
 #include "SensorInputProxy.h"
 
 namespace embeddedpenguins::gpu::neuron::model
@@ -18,6 +18,7 @@ namespace embeddedpenguins::gpu::neuron::model
 
     using nlohmann::json;
 
+    using embeddedpenguins::core::neuron::model::ModelContext;
     using embeddedpenguins::core::neuron::model::ISensorInput;
     using embeddedpenguins::core::neuron::model::SensorInputProxy;
 
@@ -30,7 +31,7 @@ namespace embeddedpenguins::gpu::neuron::model
     template<class RECORDTYPE>
     class WorkerInputStreamer
     {
-        ModelEngineContext& context_;
+        ModelContext& context_;
         bool valid_;
         vector<unsigned long long int> streamedInput_;
         vector<unique_ptr<ISensorInput>> sensorInputs_ {};
@@ -40,7 +41,7 @@ namespace embeddedpenguins::gpu::neuron::model
         const vector<unsigned long long int>& StreamedInput() const { return streamedInput_; }
 
     public:
-        WorkerInputStreamer(ModelEngineContext& context) :
+        WorkerInputStreamer(ModelContext& context) :
             context_(context),
             valid_(true)
         {
